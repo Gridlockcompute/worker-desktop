@@ -1,0 +1,112 @@
+name: Release Gridlock Worker
+
+on:
+  push:
+    tags:
+      - "worker-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. worker-v0.1.1)"
+        required: true
+        default: "worker-v0.1.1"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: pip install pillow
+      - shell: pwsh
+        env:
+          CSC_LINK_B64: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if ($env:CSC_LINK_B64) {
+            $pfx = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CSC_LINK_B64))
+            $env:CSC_LINK = $pfx
+          }
+          npm run package -- --win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gridlock-worker-windows
+          path: |
+            release/Gridlock-Worker-Setup-*.exe
+            release/latest.yml
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - run: pip install pillow
+      - run: npm run package -- --mac --universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gridlock-worker-macos
+          path: release/Gridlock-Worker-*.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libfuse2 fuse3
+      - run: npm ci
+      - run: pip3 install pillow
+      - run: npm run package -- --linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gridlock-worker-linux
+          path: release/Gridlock-Worker-*.AppImage
+
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: find artifacts -type f | sort
+      - if: startsWith(github.ref, 'refs/tags/worker-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/latest.yml
+          generate_release_notes: true
+          draft: false
+      - if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: Gridlock Worker ${{ github.event.inputs.tag }}
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/latest.yml
+          generate_release_notes: true
+          draft: true
