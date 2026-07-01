@@ -13,7 +13,7 @@ Gridlock Worker is the operator-facing desktop client for the Gridlock network. 
 - Jobs and earnings views tied to your wallet
 - System tray — run in the background while serving jobs
 
-The app uses your **Solana public address** only (never your private key). Staking and collateral live on the web at [https://grid-lock.tech/stake](https://grid-lock.tech/stake).
+The app uses your **Solana public address** only (never your private key). Stake GRID and withdraw earned SOL on the web at [https://grid-lock.tech/worker](https://grid-lock.tech/worker) and [https://grid-lock.tech/stake](https://grid-lock.tech/stake).
 
 ## Features
 
