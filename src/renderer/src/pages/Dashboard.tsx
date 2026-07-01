@@ -480,7 +480,7 @@ export default function Dashboard() {
         {[
           { label: 'JOBS TODAY',   val: jobsToday.toString() },
           { label: 'TOKENS / SEC', val: workerOn && tokensPerSec > 0 ? Math.round(tokensPerSec).toLocaleString() : '—' },
-          { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} $LOCK` },
+          { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} $GRID` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
@@ -557,7 +557,7 @@ export default function Dashboard() {
               <span className="mono" style={{ color: 'var(--text-secondary)', flex: 1, fontSize: 10 }}>#{j.id.slice(0, 8)}</span>
               <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tokens.toLocaleString()} tok</span>
               <span style={{ color: j.status === 'completed' ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 700, minWidth: 82, textAlign: 'right' }}>
-                {j.status === 'completed' ? `+${j.earn} $LOCK` : '—'}
+                {j.status === 'completed' ? `+${j.earn} $GRID` : '—'}
               </span>
             </div>
           ))

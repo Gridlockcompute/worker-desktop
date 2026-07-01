@@ -229,5 +229,5 @@ app.whenReady().then(() => {
   startDaemon()
 })
 
-app.on('window-all-closed', (e: Event) => e.preventDefault())
+app.on('window-all-closed', () => { /* do nothing */ })
 app.on('before-quit', () => { stopDaemon() })

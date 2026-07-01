@@ -44,10 +44,10 @@ export default function Earnings() {
       {/* Top stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
         {[
-          { label: 'TODAY',     val: `${today.toFixed(4)} $LOCK`,    sub: 'earned' },
-          { label: 'THIS WEEK', val: `${weekEarn.toFixed(4)} $LOCK`,     sub: 'earned' },
-          { label: 'ALL TIME',  val: `${total.toFixed(4)} $LOCK`,         sub: 'total' },
-          { label: 'STAKED',    val: staked > 0 ? `${staked.toLocaleString()} $LOCK` : '—',  sub: staked > 0 ? '8% APY' : 'not staked' },
+          { label: 'TODAY',     val: `${today.toFixed(4)} $GRID`,    sub: 'earned' },
+          { label: 'THIS WEEK', val: `${weekEarn.toFixed(4)} $GRID`,     sub: 'earned' },
+          { label: 'ALL TIME',  val: `${total.toFixed(4)} $GRID`,         sub: 'total' },
+          { label: 'STAKED',    val: staked > 0 ? `${staked.toLocaleString()} $GRID` : '—',  sub: staked > 0 ? '8% APY' : 'not staked' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
@@ -79,7 +79,7 @@ export default function Earnings() {
                     minWidth: 120,
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', marginBottom: 4 }}>{d.day}</div>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff' }}>{d.earn} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)' }}>$LOCK</span></div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff' }}>{d.earn} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)' }}>$GRID</span></div>
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{d.jobs} jobs</div>
                   </div>
                 )
@@ -101,13 +101,13 @@ export default function Earnings() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}>Staked balance</div>
-            <div style={{ fontSize: 20, fontWeight: 900 }}>{staked.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$LOCK</span></div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>~{apyDaily.toFixed(2)} $LOCK/day APY</div>
+            <div style={{ fontSize: 20, fontWeight: 900 }}>{staked.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$GRID</span></div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>~{apyDaily.toFixed(2)} $GRID/day APY</div>
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}>Pending unstake</div>
             <div style={{ fontSize: 20, fontWeight: 900, color: pendingUnstake > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-              {pendingUnstake.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$LOCK</span>
+              {pendingUnstake.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$GRID</span>
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>21-day cooldown</div>
           </div>
@@ -127,7 +127,7 @@ export default function Earnings() {
         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>PENALTY CREDITS RECEIVED</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>+3.21 $LOCK</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>+3.21 $GRID</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>from 4 worker penalties this week</div>
           </div>
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'right' }}>

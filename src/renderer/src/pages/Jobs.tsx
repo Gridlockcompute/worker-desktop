@@ -60,7 +60,7 @@ export default function Jobs() {
           { label: 'TOTAL JOBS',    val: jobs.length.toString() },
           { label: 'COMPLETED',     val: jobs.filter(j => j.status === 'completed').length.toString() },
           { label: 'TOKENS SERVED', val: `${(totalTok / 1_000_000).toFixed(2)}M` },
-          { label: 'TOTAL EARNED',  val: `${totalEarn.toFixed(4)} $LOCK` },
+          { label: 'TOTAL EARNED',  val: `${totalEarn.toFixed(4)} $GRID` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
