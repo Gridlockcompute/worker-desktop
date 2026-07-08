@@ -35,7 +35,7 @@ export function packagedDaemonEnv(settings: Record<string, string>): NodeJS.Proc
   const env: NodeJS.ProcessEnv = { ...process.env, ...settings }
   const pyDir = getPythonModuleDir()
   env.PYTHONPATH = env.PYTHONPATH ? `${pyDir}${pathDelimiter}${env.PYTHONPATH}` : pyDir
-  if (app.isPackaged && !env.GRIDLOCK_OLLAMA_MODEL) {
+  if (!env.GRIDLOCK_OLLAMA_MODEL) {
     env.GRIDLOCK_OLLAMA_MODEL = PACKAGED_OLLAMA_MODEL
   }
   return env

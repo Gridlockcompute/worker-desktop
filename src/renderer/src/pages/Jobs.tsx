@@ -74,8 +74,8 @@ export default function Jobs() {
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '7px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
             background: 'none', border: 'none',
-            color: filter === f ? 'var(--text-primary)' : 'var(--text-muted)',
-            borderBottom: filter === f ? '2px solid var(--text-primary)' : '2px solid transparent',
+            color: filter === f ? 'var(--accent)' : 'var(--text-muted)',
+            borderBottom: filter === f ? '2px solid var(--accent)' : '2px solid transparent',
             marginBottom: -1, textTransform: 'capitalize',
           }}>{f}</button>
         ))}
@@ -94,13 +94,13 @@ export default function Jobs() {
             alignItems: 'center', padding: '9px 13px',
             borderBottom: '1px solid var(--border)', gap: 8, fontSize: 11,
           }}>
-            <span style={{ color: j.status === 'completed' ? 'var(--success)' : j.status === 'running' ? 'var(--text-primary)' : 'var(--error)', fontWeight: 800 }}>
+            <span style={{ color: j.status === 'completed' ? 'var(--success)' : j.status === 'running' ? 'var(--accent)' : 'var(--error)', fontWeight: 800 }}>
               {j.status === 'completed' ? '✓' : j.status === 'running' ? '…' : '✗'}
             </span>
             <span className="mono" style={{ color: 'var(--text-secondary)', fontSize: 10 }}>#{j.id.slice(0, 12)}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tier ?? '—'}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tokens.toLocaleString()} tok</span>
-            <span style={{ fontWeight: 700, color: j.status === 'completed' ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 700, color: j.status === 'completed' ? 'var(--accent)' : 'var(--text-muted)' }}>
               {j.status === 'completed' ? `+${j.earn}` : '—'}
             </span>
             <span style={{ color: 'var(--text-muted)', fontSize: 10, textAlign: 'right' }}>{fmtAge(j.ts)}</span>

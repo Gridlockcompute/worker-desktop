@@ -151,6 +151,11 @@ def _req(method: str, path: str, body: dict | None = None) -> dict | None:
         log({"event": "backend_error", "path": path, "status": e.code, "err": err_body})
         if e.code == 409:
             return {"error": "already_registered", "status": 409}
+        # Unregistered worker lookup is expected before first register.
+        if e.code == 404 and method == "GET" and path.startswith("/v1/workers/") and path.count("/") == 3:
+            return None
+        if e.code == 404 and method == "POST" and path == "/v1/workers/heartbeat":
+            return None
         state["last_backend_error"] = err_body.get("error") or f"HTTP {e.code} on {path}"
         return None
     except Exception as e:
@@ -173,14 +178,6 @@ def register_with_backend():
         state["compute_mode"], state["cpu"], state["gpus"], state["gpu_index"],
     )
 
-    existing = _req("GET", f"/v1/workers/{quote(addr, safe='')}")
-    if existing and existing.get("address"):
-        state["worker_address"] = existing["address"]
-        state["backend_ok"] = True
-        send_heartbeat()
-        log({"event": "registered", "address": state["worker_address"], "mode": "existing"})
-        return
-
     body = {
         "operator_address": addr,
         "role":            ROLE,
@@ -195,22 +192,42 @@ def register_with_backend():
     if quote_payload:
         body["attestation_quote"] = quote_payload
 
-    result = _req("POST", "/v1/workers/register", body)
-
-    if result and result.get("success"):
-        state["worker_address"] = result["address"]
-        state["backend_ok"] = True
-        log({"event": "registered", "address": state["worker_address"], "mode": "new"})
-    elif result and result.get("status") == 409:
-        state["worker_address"] = addr
-        state["backend_ok"] = True
-        send_heartbeat()
-        log({"event": "registered", "address": state["worker_address"], "mode": "409_existing"})
-    else:
+    def _apply_register_result(result: dict | None) -> bool:
+        if result and result.get("success"):
+            state["worker_address"] = result.get("address") or addr
+            state["backend_ok"] = True
+            state["last_backend_error"] = None
+            log({"event": "registered", "address": state["worker_address"], "mode": "new"})
+            return True
+        if result and result.get("status") == 409:
+            state["worker_address"] = addr
+            state["backend_ok"] = True
+            state["last_backend_error"] = None
+            log({"event": "registered", "address": state["worker_address"], "mode": "409_existing"})
+            return True
         state["backend_ok"] = False
         if not state["last_backend_error"]:
             state["last_backend_error"] = "Could not register with Gridlock"
         log({"event": "register_failed", "msg": state["last_backend_error"]})
+        return False
+
+    if not _apply_register_result(_req("POST", "/v1/workers/register", body)):
+        return
+
+    # Production api.grid-lock.tech is load-balanced: register may land on a
+    # different instance than heartbeat/status. Re-register on heartbeat 404.
+    for attempt in range(2):
+        hb = _req("POST", "/v1/workers/heartbeat", {
+            "worker_address": state["worker_address"],
+            "goodput_score":  state["tokens_per_sec"],
+        })
+        if hb and hb.get("ok"):
+            state["last_backend_error"] = None
+            return
+        state["last_backend_error"] = state.get("last_backend_error") or "Worker not found on router"
+        log({"event": "heartbeat_retry", "attempt": attempt + 1, "address": state["worker_address"]})
+        if not _apply_register_result(_req("POST", "/v1/workers/register", body)):
+            return
 
 
 def send_heartbeat():
@@ -600,8 +617,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "hardware_unavailable", "message": err}, 503)
                 return
 
-            if not state["backend_ok"]:
-                register_with_backend()
+            register_with_backend()
             if not state["backend_ok"]:
                 detail = state.get("last_backend_error") or "Cannot reach Gridlock network."
                 self._json({

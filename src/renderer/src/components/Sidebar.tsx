@@ -78,7 +78,7 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
                 background: active ? 'var(--bg-3)' : 'none',
                 border: 'none',
                 borderRadius: 7,
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                color: active ? 'var(--accent)' : 'var(--text-secondary)',
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
                 cursor: 'pointer',
@@ -88,7 +88,7 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
               onMouseEnter={e => {
                 if (!active) {
                   e.currentTarget.style.background = 'var(--bg-3)'
-                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.color = 'var(--accent)'
                 }
               }}
               onMouseLeave={e => {

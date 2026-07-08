@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from typing import Callable
 
-OLLAMA_MODEL = os.getenv("GRIDLOCK_OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_MODEL = os.getenv("GRIDLOCK_OLLAMA_MODEL", "llama3.2:3b")
 VLLM_BASE_URL = os.getenv("GRIDLOCK_VLLM_URL", "http://127.0.0.1:8000/v1").rstrip("/")
 VLLM_MODEL = os.getenv("GRIDLOCK_VLLM_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
 MAX_OUTPUT_TOKENS = int(os.getenv("GRIDLOCK_MAX_TOKENS", "512"))
@@ -40,6 +40,38 @@ def _ollama_num_gpu() -> int:
 
 def get_active_model() -> str:
     return _active_model or OLLAMA_MODEL
+
+
+def _list_ollama_models(url: str) -> list[str]:
+    req = urllib.request.Request(f"{url.rstrip('/')}/api/tags")
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        data = json.loads(resp.read())
+    return [str(m.get("name", "")).strip() for m in data.get("models", []) if m.get("name")]
+
+
+def _pick_ollama_model(url: str, preferred: str) -> str:
+    available = _list_ollama_models(url)
+    if not available:
+        raise RuntimeError(
+            "Ollama is running but no models are installed. "
+            f"Run: ollama pull {preferred}"
+        )
+
+    if preferred in available:
+        return preferred
+
+    pref_base = preferred.split(":", 1)[0]
+    for name in available:
+        if name.split(":", 1)[0] == pref_base:
+            return name
+
+    for candidate in (preferred, "llama3.2:3b", "llama3.1:8b", "phi3:mini"):
+        base = candidate.split(":", 1)[0]
+        for name in available:
+            if name.split(":", 1)[0] == base:
+                return name
+
+    return available[0]
 
 
 def _check_ollama(url: str) -> bool:
@@ -83,7 +115,7 @@ def resolve_backend() -> str:
             if _check_ollama(url):
                 _ollama_url = url
                 _active_backend = "ollama"
-                _active_model = OLLAMA_MODEL
+                _active_model = _pick_ollama_model(url, OLLAMA_MODEL)
                 return _active_backend
         raise RuntimeError(
             f"Ollama not running. Install from https://ollama.com/download, "
@@ -99,7 +131,7 @@ def resolve_backend() -> str:
         if url and _check_ollama(url):
             _ollama_url = url
             _active_backend = "ollama"
-            _active_model = OLLAMA_MODEL
+            _active_model = _pick_ollama_model(url, OLLAMA_MODEL)
             return _active_backend
 
     if _check_vllm():
@@ -143,7 +175,7 @@ def _run_ollama(
     tokens = 0
 
     payload = json.dumps({
-        "model": OLLAMA_MODEL,
+        "model": get_active_model(),
         "messages": messages,
         "stream": True,
         "options": {

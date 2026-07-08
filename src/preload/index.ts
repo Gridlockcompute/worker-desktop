@@ -5,7 +5,6 @@ export type ComputeDevice = 'auto' | 'cpu' | 'gpu'
 
 export type WorkerSettings = {
   wallet: string
-  rpcUrl: string
   teeMode: boolean
   autoStart: boolean
   maxVramPct: number

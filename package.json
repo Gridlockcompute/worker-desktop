@@ -49,12 +49,18 @@
       {
         "from": "python",
         "to": "python",
-        "filter": ["**/*", "!**/__pycache__/**", "!**/.venv/**"]
+        "filter": [
+          "**/*",
+          "!**/__pycache__/**",
+          "!**/.venv/**"
+        ]
       },
       {
         "from": "python-runtime",
         "to": "python-runtime",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "files": [
@@ -74,6 +80,7 @@
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
     "typescript": "^5.5.3",
+    "viem": "^2.54.6",
     "vite": "^5.3.4"
   }
 }

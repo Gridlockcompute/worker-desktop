@@ -70,7 +70,7 @@ function CircleGauge({ pct, size = 90, stroke = 6, label, value }: {
         />
         <motion.circle
           cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke="var(--text-primary)" strokeWidth={stroke}
+          fill="none" stroke="var(--accent)" strokeWidth={stroke}
           strokeDasharray={`${filled} ${circ - filled}`}
           strokeDashoffset={offset}
           strokeLinecap="round"
@@ -100,7 +100,7 @@ function StatBar({ label, pct, valueLabel }: { label: string; pct: number; value
         <motion.div
           animate={{ width: `${Math.min(100, pct)}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          style={{ height: '100%', background: 'var(--text-primary)', borderRadius: 1 }}
+          style={{ height: '100%', background: 'var(--accent)', borderRadius: 1 }}
         />
       </div>
     </div>
@@ -134,7 +134,7 @@ type GridlockApi = {
     jobs: () => Promise<{ jobs: Job[] }>
   }
   settings: {
-    load: () => Promise<{ wallet?: string; rpcUrl?: string; teeMode?: boolean; autoStart?: boolean; maxVramPct?: number; tier?: string }>
+    load: () => Promise<{ wallet?: string; teeMode?: boolean; autoStart?: boolean; maxVramPct?: number; tier?: string }>
     save: (cfg: unknown) => Promise<{ ok: boolean }>
   }
 }
@@ -305,7 +305,7 @@ export default function Dashboard() {
         : workerOn
           ? 'IDLE'
           : 'OFFLINE'
-  const statusDotColor = workerOn || toggleBusy === 'starting' ? 'var(--text-primary)' : 'var(--text-muted)'
+  const statusDotColor = workerOn || toggleBusy === 'starting' ? 'var(--accent)' : 'var(--text-muted)'
   const buttonLabel = toggleBusy === 'starting'
     ? 'STARTING…'
     : toggleBusy === 'stopping'
@@ -325,7 +325,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.2px', marginBottom: 4 }}>Dashboard</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span className={workerOn || toggleBusy === 'starting' ? 'pulse-dot' : ''} style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: statusDotColor }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: toggleBusy ? 'var(--text-primary)' : 'var(--text-muted)' }}>{statusLabel}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: toggleBusy ? 'var(--accent)' : 'var(--text-muted)' }}>{statusLabel}</span>
             {toggleBusy === 'starting' && (
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>
                 · checking Ollama & Gridlock…
@@ -356,12 +356,12 @@ export default function Dashboard() {
               : workerOn
                 ? 'var(--accent-dim)'
                 : canStartWorker
-                  ? 'var(--text-primary)'
+                  ? 'var(--accent)'
                   : 'var(--bg-4)',
             color: isBusy
-              ? 'var(--text-primary)'
+              ? '#000000'
               : workerOn
-                ? 'var(--text-primary)'
+                ? 'var(--accent)'
                 : canStartWorker
                   ? '#000000'
                   : 'var(--text-muted)',
@@ -399,7 +399,7 @@ export default function Dashboard() {
             disabled={!isValidWallet(walletInput) || walletSaving}
             style={{
               width: '100%', padding: '10px 0', borderRadius: 6, fontWeight: 800, fontSize: 12,
-              background: isValidWallet(walletInput) ? 'var(--text-primary)' : 'var(--bg-4)',
+              background: isValidWallet(walletInput) ? 'var(--accent)' : 'var(--bg-4)',
               color: isValidWallet(walletInput) ? '#000000' : 'var(--text-muted)',
               border: '1px solid var(--border-2)', cursor: isValidWallet(walletInput) ? 'pointer' : 'not-allowed',
             }}
@@ -496,11 +496,11 @@ export default function Dashboard() {
             <AreaChart data={history} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ffffff" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#CCFF00" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#CCFF00" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="v" stroke="#ffffff" strokeWidth={1.4} fill="url(#tg)" dot={false} isAnimationActive={false} />
+              <Area type="monotone" dataKey="v" stroke="#CCFF00" strokeWidth={1.4} fill="url(#tg)" dot={false} isAnimationActive={false} />
               <Tooltip
                 contentStyle={{ background: 'var(--bg-3)', border: '1px solid var(--border)', fontSize: 10, borderRadius: 4, padding: '3px 8px' }}
                 formatter={(v: number) => [`${v.toLocaleString()} tok/s`, '']}
@@ -523,7 +523,7 @@ export default function Dashboard() {
           <div style={{ height: 2, background: 'var(--bg-4)', borderRadius: 1, overflow: 'hidden', marginBottom: 5 }}>
             <motion.div
               animate={{ width: `${Math.min(100, activeJob.progress)}%` }}
-              style={{ height: '100%', background: 'var(--text-primary)', borderRadius: 1 }}
+              style={{ height: '100%', background: 'var(--accent)', borderRadius: 1 }}
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)' }}>
@@ -556,7 +556,7 @@ export default function Dashboard() {
               </span>
               <span className="mono" style={{ color: 'var(--text-secondary)', flex: 1, fontSize: 10 }}>#{j.id.slice(0, 8)}</span>
               <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tokens.toLocaleString()} tok</span>
-              <span style={{ color: j.status === 'completed' ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 700, minWidth: 82, textAlign: 'right' }}>
+              <span style={{ color: j.status === 'completed' ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 700, minWidth: 82, textAlign: 'right' }}>
                 {j.status === 'completed' ? `+${j.earn} $GRID` : '—'}
               </span>
             </div>

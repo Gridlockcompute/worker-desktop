@@ -13,10 +13,10 @@ export default function TitleBar() {
     } as React.CSSProperties}>
       <div style={{ width: 180, display: 'flex', alignItems: 'center', paddingLeft: 16, gap: 8 }}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-          <rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1.5" fill="var(--orange)" opacity="0.9"/>
-          <rect x="8" y="0.5" width="5.5" height="5.5" rx="1.5" fill="var(--bg-5)"/>
-          <rect x="0.5" y="8" width="5.5" height="5.5" rx="1.5" fill="var(--bg-5)"/>
-          <rect x="8" y="8" width="5.5" height="5.5" rx="1.5" fill="var(--bg-5)"/>
+          <rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1.5" fill="var(--accent)"/>
+          <rect x="8" y="0.5" width="5.5" height="5.5" rx="1.5" fill="rgba(255, 255, 255, 0.85)"/>
+          <rect x="0.5" y="8" width="5.5" height="5.5" rx="1.5" fill="rgba(255, 255, 255, 0.45)"/>
+          <rect x="8" y="8" width="5.5" height="5.5" rx="1.5" fill="rgba(255, 255, 255, 0.65)"/>
         </svg>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '1.2px' }}>
           GRIDLOCK

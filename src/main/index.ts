@@ -5,7 +5,7 @@ import { loadSettings, saveSettings, GRIDLOCK_API_URL, GRIDLOCK_STAKE_URL, type 
 import { getDaemonScriptPath, getPythonExecutable, getPythonModuleDir, packagedDaemonEnv } from './python.js'
 import { registerSetupHandlers } from './setup.js'
 import { fetchWalletJobs, mergeWalletJobs, type WorkerJob } from './wallet-jobs.js'
-import { isValidEvmWallet } from '@shared/evm-wallet'
+import { isValidEvmWallet, normalizeEvmWallet } from '@shared/evm-wallet'
 
 const isDev = !app.isPackaged
 let mainWindow: BrowserWindow | null = null
@@ -90,7 +90,8 @@ function startDaemon(settings = loadSettings()): void {
     '--backend', GRIDLOCK_API_URL,
   ]
   if (settings.wallet.trim()) {
-    args.push('--wallet', settings.wallet.trim())
+    const wallet = normalizeWallet(settings.wallet.trim())
+    if (wallet) args.push('--wallet', wallet)
   }
   if (settings.teeMode) {
     args.push('--tee')
@@ -149,6 +150,10 @@ function isValidWallet(wallet: string): boolean {
   return isValidEvmWallet(wallet)
 }
 
+function normalizeWallet(wallet: string): string | null {
+  return normalizeEvmWallet(wallet)
+}
+
 // IPC
 ipcMain.handle('daemon:status', () => fetchDaemon('/status').catch(() => ({ running: false, gpu: null })))
 ipcMain.handle('worker:start', async () => {
@@ -183,12 +188,13 @@ ipcMain.handle('worker:jobs', async () => {
 ipcMain.handle('worker:earnings',() => fetchDaemon('/earnings').catch(() => ({ today: 0, week: 0, total: 0, history: [] })))
 ipcMain.handle('settings:load', () => loadSettings())
 async function syncWalletToDaemon(wallet: string): Promise<boolean> {
-  if (!isValidWallet(wallet)) return false
+  const normalized = normalizeWallet(wallet)
+  if (!normalized) return false
   try {
     const res = await fetch(`http://127.0.0.1:${DAEMON_PORT}/wallet`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: wallet.trim() }),
+      body: JSON.stringify({ address: normalized }),
     })
     return res.ok
   } catch {
@@ -213,10 +219,12 @@ async function syncConfigToDaemon(settings: WorkerSettings): Promise<boolean> {
 }
 
 ipcMain.handle('settings:save', async (_e, cfg: WorkerSettings) => {
-  saveSettings(cfg)
-  const syncedWallet = await syncWalletToDaemon(cfg.wallet)
-  const syncedConfig = await syncConfigToDaemon(cfg)
-  if (!syncedWallet || !syncedConfig) startDaemon(cfg)
+  const normalizedWallet = normalizeWallet(cfg.wallet)
+  const next = normalizedWallet ? { ...cfg, wallet: normalizedWallet } : cfg
+  saveSettings(next)
+  const syncedWallet = normalizedWallet ? await syncWalletToDaemon(normalizedWallet) : false
+  const syncedConfig = await syncConfigToDaemon(next)
+  if (!syncedWallet || !syncedConfig) startDaemon(next)
   return { ok: true }
 })
 

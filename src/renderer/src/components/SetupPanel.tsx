@@ -84,7 +84,7 @@ export default function SetupPanel() {
     }}>
       <div style={{
         width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-        background: done ? 'var(--text-primary)' : 'var(--bg-4)',
+        background: done ? 'var(--accent)' : 'var(--bg-4)',
         color: done ? '#000' : 'var(--text-muted)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 11, fontWeight: 900,
@@ -131,8 +131,8 @@ export default function SetupPanel() {
             className={busy === 'ollama' ? 'btn-busy' : undefined}
             style={{
               padding: '8px 16px', borderRadius: 6, fontWeight: 800, fontSize: 11,
-              background: busy === 'ollama' ? 'var(--accent-mid)' : 'var(--text-primary)',
-              color: busy === 'ollama' ? 'var(--text-primary)' : '#000',
+              background: busy === 'ollama' ? 'var(--accent-mid)' : 'var(--accent)',
+              color: busy === 'ollama' ? '#000000' : '#000',
               border: '1px solid var(--border-2)', cursor: busy ? 'wait' : 'pointer',
             }}
           >
@@ -155,8 +155,8 @@ export default function SetupPanel() {
             className={busy === 'model' ? 'btn-busy' : undefined}
             style={{
               padding: '8px 16px', borderRadius: 6, fontWeight: 800, fontSize: 11,
-              background: busy === 'model' ? 'var(--accent-mid)' : 'var(--text-primary)',
-              color: busy === 'model' ? 'var(--text-primary)' : '#000',
+              background: busy === 'model' ? 'var(--accent-mid)' : 'var(--accent)',
+              color: busy === 'model' ? '#000000' : '#000',
               border: '1px solid var(--border-2)', cursor: busy ? 'wait' : 'pointer',
             }}
           >

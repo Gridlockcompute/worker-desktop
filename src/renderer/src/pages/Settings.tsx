@@ -17,7 +17,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{
       width: 40, height: 22, borderRadius: 11, border: '1px solid var(--border-2)',
-      background: on ? 'var(--text-primary)' : 'var(--bg-4)',
+      background: on ? 'var(--accent)' : 'var(--bg-4)',
       cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0
     }}>
       <div style={{
@@ -32,7 +32,6 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 export default function Settings() {
   const [wallet, setWallet] = useState('')
-  const [rpcUrl, setRpcUrl] = useState('https://rpc.mainnet.chain.robinhood.com')
   const [teeMode, setTeeMode] = useState(false)
   const [autoStart, setAutoStart] = useState(false)
   const [maxVram, setMaxVram] = useState('90')
@@ -50,7 +49,6 @@ export default function Settings() {
     } }).gridlock
     gl?.settings.load().then((cfg) => {
       if (typeof cfg.wallet === 'string') setWallet(cfg.wallet)
-      if (typeof cfg.rpcUrl === 'string') setRpcUrl(cfg.rpcUrl)
       if (typeof cfg.teeMode === 'boolean') setTeeMode(cfg.teeMode)
       if (typeof cfg.autoStart === 'boolean') setAutoStart(cfg.autoStart)
       if (typeof cfg.maxVramPct === 'number') setMaxVram(String(cfg.maxVramPct))
@@ -70,7 +68,7 @@ export default function Settings() {
 
   const save = async () => {
     const gl = (window as unknown as { gridlock?: { settings: { save: (cfg: unknown) => Promise<{ ok: boolean }> } } }).gridlock
-    const cfg = { wallet, rpcUrl, teeMode, autoStart, maxVramPct: Number(maxVram), tier, computeDevice, gpuIndex }
+    const cfg = { wallet, teeMode, autoStart, maxVramPct: Number(maxVram), tier, computeDevice, gpuIndex }
     try { await gl?.settings.save(cfg) } catch {}
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -86,9 +84,6 @@ export default function Settings() {
         <Field label="EVM Wallet Address" sub="Your 0x address on Robinhood Chain. Earnings and stake are managed on the web dashboard.">
           <input value={wallet} onChange={e => setWallet(e.target.value)} placeholder="0x wallet address…" className="mono" style={{ fontSize: 12 }} />
         </Field>
-        <Field label="RPC Endpoint" sub="Robinhood Chain RPC URL (optional — router handles chain reads).">
-          <input value={rpcUrl} onChange={e => setRpcUrl(e.target.value)} />
-        </Field>
       </div>
 
       {/* Worker */}
@@ -100,8 +95,8 @@ export default function Settings() {
             {(['auto', 'cpu', 'gpu'] as ComputeDevice[]).map(d => (
               <button key={d} onClick={() => setComputeDevice(d)} style={{
                 padding: '6px 14px', borderRadius: 5, fontSize: 12, fontWeight: 700,
-                border: `1px solid ${computeDevice === d ? 'var(--text-primary)' : 'var(--border-2)'}`,
-                background: computeDevice === d ? 'var(--text-primary)' : 'var(--accent-dim)',
+                border: `1px solid ${computeDevice === d ? 'var(--accent)' : 'var(--border-2)'}`,
+                background: computeDevice === d ? 'var(--accent)' : 'var(--accent-dim)',
                 color: computeDevice === d ? '#000000' : 'var(--text-secondary)',
                 cursor: 'pointer', transition: 'all 0.12s', textTransform: 'uppercase',
               }}>{d}</button>
@@ -113,7 +108,7 @@ export default function Settings() {
             </div>
           )}
           {detectedGpus.length === 0 && computeDevice === 'gpu' && (
-            <div style={{ fontSize: 11, color: 'var(--orange)', fontWeight: 600, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, lineHeight: 1.5 }}>
               No GPU detected yet. Install NVIDIA or AMD drivers, or switch to CPU / Auto.
             </div>
           )}
@@ -129,8 +124,8 @@ export default function Settings() {
               {detectedGpus.map(g => (
                 <button key={g.index} onClick={() => setGpuIndex(g.index)} style={{
                   padding: '5px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700,
-                  border: `1px solid ${gpuIndex === g.index ? 'var(--text-primary)' : 'var(--border-2)'}`,
-                  background: gpuIndex === g.index ? 'var(--text-primary)' : 'var(--accent-dim)',
+                  border: `1px solid ${gpuIndex === g.index ? 'var(--accent)' : 'var(--border-2)'}`,
+                  background: gpuIndex === g.index ? 'var(--accent)' : 'var(--accent-dim)',
                   color: gpuIndex === g.index ? '#000000' : 'var(--text-secondary)',
                   cursor: 'pointer',
                 }}>GPU {g.index}</button>
@@ -144,8 +139,8 @@ export default function Settings() {
             {['Nano', 'Micro', 'Batch', 'Realtime'].map(t => (
               <button key={t} onClick={() => setTier(t)} style={{
                 padding: '6px 14px', borderRadius: 5, fontSize: 12, fontWeight: 700,
-                border: `1px solid ${tier === t ? 'var(--text-primary)' : 'var(--border-2)'}`,
-                background: tier === t ? 'var(--text-primary)' : 'var(--accent-dim)',
+                border: `1px solid ${tier === t ? 'var(--accent)' : 'var(--border-2)'}`,
+                background: tier === t ? 'var(--accent)' : 'var(--accent-dim)',
                 color: tier === t ? '#000000' : 'var(--text-secondary)',
                 cursor: 'pointer', transition: 'all 0.12s',
               }}>{t}</button>
@@ -158,7 +153,7 @@ export default function Settings() {
             <input
               type="range" min={50} max={98} value={maxVram}
               onChange={e => setMaxVram(e.target.value)}
-              style={{ flex: 1, accentColor: '#ffffff', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              style={{ flex: 1, accentColor: 'var(--accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             />
             <span style={{ fontWeight: 700, minWidth: 36, textAlign: 'right' }}>{maxVram}%</span>
           </div>
@@ -199,9 +194,9 @@ export default function Settings() {
 
       <button onClick={save} style={{
         width: '100%', padding: '11px 0', borderRadius: 6, fontWeight: 800, fontSize: 13,
-        background: saved ? 'rgba(255,255,255,0.07)' : 'var(--text-primary)',
-        color: saved ? 'var(--text-primary)' : '#000000',
-        border: saved ? '1px solid var(--border-2)' : '1px solid var(--text-primary)',
+        background: saved ? 'var(--accent-dim)' : 'var(--accent)',
+        color: saved ? 'var(--accent)' : '#000000',
+        border: saved ? '1px solid var(--accent-border)' : '1px solid var(--accent)',
         cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.5px',
       }}>
         {saved ? 'SAVED ✓' : 'SAVE SETTINGS'}

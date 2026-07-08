@@ -79,7 +79,7 @@ export default function Earnings() {
                     minWidth: 120,
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', marginBottom: 4 }}>{d.day}</div>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff' }}>{d.earn} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)' }}>$GRID</span></div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: '#CCFF00' }}>{d.earn} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(204, 255, 0, 0.45)' }}>$GRID</span></div>
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{d.jobs} jobs</div>
                   </div>
                 )
@@ -87,7 +87,7 @@ export default function Earnings() {
             />
             <Bar dataKey="earn" radius={[3, 3, 0, 0]}>
               {history.map((d, i) => (
-                <Cell key={i} fill={d.earn === maxBar ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.18)'} />
+                <Cell key={i} fill={d.earn === maxBar ? '#CCFF00' : 'rgba(204, 255, 0, 0.18)'} />
               ))}
             </Bar>
           </BarChart>
@@ -106,17 +106,17 @@ export default function Earnings() {
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}>Pending unstake</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: pendingUnstake > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: pendingUnstake > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
               {pendingUnstake.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$GRID</span>
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>21-day cooldown</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--text-primary)', color: '#000000', border: '1px solid var(--text-primary)', borderRadius: 5, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--accent)', color: '#000000', border: '1px solid var(--accent)', borderRadius: 5, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
             STAKE MORE
           </button>
-          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--accent-dim)', color: 'var(--text-primary)', border: '1px solid var(--border-2)', borderRadius: 5, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 5, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
             UNSTAKE
           </button>
         </div>
