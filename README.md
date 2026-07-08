@@ -119,7 +119,7 @@ GRIDLOCK_BACKEND_URL=http://127.0.0.1:8080 npm run dev
 npm run dev              # Electron + Vite hot reload
 npm run build            # Compile main/preload/renderer
 npm run bundle-python    # Embed Python runtime (Windows packaging)
-npm run generate-icons   # Regenerate build/icon.ico from chevron mark
+npm run generate-icons   # Regenerate build/icon.png + icon.ico from build/gridlock.png
 npm run package          # Full installer (platform-specific)
 ```
 

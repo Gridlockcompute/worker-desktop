@@ -212,13 +212,14 @@ export default function Dashboard() {
         if (s.worker_address && isValidWallet(s.worker_address)) {
           setWallet(s.worker_address)
         }
-        setTokensPerSec(s.tokens_per_sec ?? 0)
+        if (s.active_job) setActiveJob(s.active_job as ActiveJob)
+        else setActiveJob(null)
+        const tps = s.tokens_per_sec ?? 0
+        setTokensPerSec(tps)
         setJobsToday(s.jobs_today ?? 0)
         setEarningsToday(s.earnings_today ?? 0)
-        if (s.active_job) setActiveJob(s.active_job as ActiveJob)
-        else if (!s.running) setActiveJob(null)
-        if (s.tokens_per_sec > 0) {
-          setHistory(h => [...h.slice(1), { t: h[h.length - 1].t + 1, v: Math.round(s.tokens_per_sec) }])
+        if (s.running && tps > 0) {
+          setHistory(h => [...h.slice(1), { t: h[h.length - 1].t + 1, v: Math.max(1, Math.round(tps)) }])
         }
 
         const j = await api.worker.jobs()
@@ -479,7 +480,7 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 12 }}>
         {[
           { label: 'JOBS TODAY',   val: jobsToday.toString() },
-          { label: 'TOKENS / SEC', val: workerOn && tokensPerSec > 0 ? Math.round(tokensPerSec).toLocaleString() : '—' },
+          { label: 'TOKENS / SEC', val: workerOn && tokensPerSec > 0 ? (tokensPerSec >= 10 ? Math.round(tokensPerSec).toLocaleString() : tokensPerSec.toFixed(1)) : '—' },
           { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} $GRID` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>

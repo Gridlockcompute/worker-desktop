@@ -92,7 +92,13 @@ const api = {
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
-    close:    () => ipcRenderer.invoke('window:close')
+    close:    () => ipcRenderer.invoke('window:close'),
+    quit:     () => ipcRenderer.invoke('window:quit'),
+    onClosePrompt: (cb: () => void) => {
+      const handler = () => cb()
+      ipcRenderer.on('window:close-prompt', handler)
+      return () => ipcRenderer.removeListener('window:close-prompt', handler)
+    },
   },
   app: {
     openStakePage: (): Promise<void> => ipcRenderer.invoke('app:openStakePage')

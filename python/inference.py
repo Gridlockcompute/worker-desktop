@@ -200,15 +200,32 @@ def _run_ollama(
                 chunk = json.loads(line.decode())
             except json.JSONDecodeError:
                 continue
+
             piece = (chunk.get("message") or {}).get("content") or ""
-            if not piece:
-                continue
-            if first_at is None:
-                first_at = time.time()
-            content += piece
-            tokens += 1
-            if on_token:
-                on_token(tokens, max_tokens)
+            eval_count = chunk.get("eval_count")
+
+            if eval_count is not None:
+                tokens = int(eval_count)
+                if on_token:
+                    on_token(tokens, max_tokens)
+
+            if piece:
+                if first_at is None:
+                    first_at = time.time()
+                content += piece
+                if eval_count is None:
+                    tokens += 1
+                    if on_token:
+                        on_token(tokens, max_tokens)
+
+            if chunk.get("done"):
+                if eval_count is not None:
+                    tokens = int(eval_count)
+                elif content and tokens == 0:
+                    tokens = max(1, len(content.split()))
+                if on_token and eval_count is not None:
+                    on_token(tokens, max_tokens)
+                break
 
     end = time.time()
     ttft_ms = int(((first_at or end) - start) * 1000)

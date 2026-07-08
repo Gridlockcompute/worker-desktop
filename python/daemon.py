@@ -450,9 +450,16 @@ PRICE_PER_1M = 8.5
 
 
 def _update_job_progress(generated: int, max_tokens: int):
-    if state["active_job"]:
-        pct = min(99.0, (generated / max(max_tokens, 1)) * 100)
-        state["active_job"]["progress"] = pct
+    if not state["active_job"]:
+        return
+    token_pct = min(99.0, (generated / max(max_tokens, 1)) * 100)
+    started = state["active_job"].get("started_at", time.time())
+    # Ollama may pause between stream chunks — creep progress by elapsed time so UI doesn't freeze.
+    elapsed_pct = min(95.0, ((time.time() - started) / max(max_tokens * 0.12, 3.0)) * 100)
+    state["active_job"]["progress"] = max(state["active_job"].get("progress", 0.0), token_pct, elapsed_pct)
+    if generated > 0:
+        elapsed = max(time.time() - started, 0.1)
+        state["tokens_per_sec"] = round(generated / elapsed, 1)
 
 
 def worker_loop():
@@ -476,6 +483,7 @@ def worker_loop():
             "tier": tier,
             "progress": 0.0,
             "turns": len(inference_messages),
+            "started_at": time.time(),
         }
         log({"event": "job_start", "id": job_id, "tokens": max_tokens, "tier": tier})
 
@@ -545,9 +553,7 @@ def worker_loop():
         )
         log({"event": "job_done", "id": job_id, "status": "completed", "earn": earn, "tps": tps})
 
-        if state["running"]:
-            state["tokens_per_sec"] = 0
-            refresh_hardware()
+        refresh_hardware()
 
 # ── Local HTTP API (for Electron UI) ─────────────────────────────────────────
 

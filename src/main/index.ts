@@ -11,6 +11,7 @@ const isDev = !app.isPackaged
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
+let quitting = false
 const DAEMON_PORT = 7420
 
 function iconPath(): string {
@@ -47,6 +48,12 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => mainWindow!.show())
+  mainWindow.on('close', (e) => {
+    if (!quitting) {
+      e.preventDefault()
+      mainWindow?.webContents.send('window:close-prompt')
+    }
+  })
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
@@ -66,7 +73,7 @@ function createTray(): void {
   const menu = Menu.buildFromTemplate([
     { label: 'Show Gridlock Worker', click: () => { mainWindow?.show(); mainWindow?.focus() } },
     { type: 'separator' },
-    { label: 'Quit', click: () => { app.quit() } }
+    { label: 'Quit', click: () => { quitting = true; app.quit() } }
   ])
   tray.setToolTip('Gridlock Worker')
   tray.setContextMenu(menu)
@@ -233,6 +240,7 @@ ipcMain.handle('app:openStakePage', () => shell.openExternal(GRIDLOCK_STAKE_URL)
 ipcMain.handle('window:minimize', () => mainWindow?.minimize())
 ipcMain.handle('window:maximize', () => mainWindow?.isMaximized() ? mainWindow.restore() : mainWindow?.maximize())
 ipcMain.handle('window:close',    () => mainWindow?.hide())
+ipcMain.handle('window:quit',     () => { quitting = true; app.quit() })
 
 registerSetupHandlers(() => mainWindow)
 
@@ -243,4 +251,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => { /* do nothing */ })
-app.on('before-quit', () => { stopDaemon() })
+app.on('before-quit', () => {
+  quitting = true
+  stopDaemon()
+})
