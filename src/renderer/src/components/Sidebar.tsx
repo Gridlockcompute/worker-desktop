@@ -116,7 +116,7 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
         color: 'var(--text-secondary)',
         letterSpacing: '0.1em',
       }}>
-        Gridlock.Network · v0.1.6
+        Gridlock.Network · v0.1.7
       </div>
     </nav>
   )

@@ -98,12 +98,42 @@ export default function Settings() {
     return () => clearInterval(poll)
   }, [])
 
-  const save = async () => {
+  const save = async (overrides?: Partial<{
+    wallet: string
+    earningsWallet: string
+    teeMode: boolean
+    autoStart: boolean
+    maxVramPct: number
+    tier: string
+    computeDevice: ComputeDevice
+    gpuIndex: number
+  }>) => {
     const gl = (window as unknown as { gridlock?: { settings: { save: (cfg: unknown) => Promise<{ ok: boolean }> } } }).gridlock
-    const cfg = { wallet, earningsWallet, teeMode, autoStart, maxVramPct: Number(maxVram), tier, computeDevice, gpuIndex, theme: currentTheme() }
+    const cfg = {
+      wallet,
+      earningsWallet,
+      teeMode,
+      autoStart,
+      maxVramPct: Number(maxVram),
+      tier,
+      computeDevice,
+      gpuIndex,
+      theme: currentTheme(),
+      ...overrides,
+    }
     try { await gl?.settings.save(cfg) } catch {}
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const setComputeDeviceAndSave = async (device: ComputeDevice) => {
+    setComputeDevice(device)
+    await save({ computeDevice: device })
+  }
+
+  const setGpuIndexAndSave = async (index: number) => {
+    setGpuIndex(index)
+    await save({ gpuIndex: index })
   }
 
   return (
@@ -128,7 +158,7 @@ export default function Settings() {
         <Field label="Compute Device" sub="Choose whether Ollama runs on CPU or GPU. Auto uses a GPU when NVIDIA/AMD is detected, otherwise CPU.">
           <div style={{ display: 'flex', gap: 6, marginBottom: detectedGpus.length > 1 && computeDevice !== 'cpu' ? 10 : 0 }}>
             {(['auto', 'cpu', 'gpu'] as ComputeDevice[]).map(d => (
-              <button key={d} onClick={() => setComputeDevice(d)} style={{
+              <button key={d} onClick={() => void setComputeDeviceAndSave(d)} style={{
                 padding: '6px 14px', borderRadius: 5, fontSize: 12, fontWeight: 700,
                 border: `1px solid ${computeDevice === d ? 'var(--accent)' : 'var(--border-2)'}`,
                 background: computeDevice === d ? 'var(--accent)' : 'var(--accent-dim)',
@@ -157,7 +187,7 @@ export default function Settings() {
           {detectedGpus.length > 1 && computeDevice !== 'cpu' && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {detectedGpus.map(g => (
-                <button key={g.index} onClick={() => setGpuIndex(g.index)} style={{
+                <button key={g.index} onClick={() => void setGpuIndexAndSave(g.index)} style={{
                   padding: '5px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700,
                   border: `1px solid ${gpuIndex === g.index ? 'var(--accent)' : 'var(--border-2)'}`,
                   background: gpuIndex === g.index ? 'var(--accent)' : 'var(--accent-dim)',
@@ -244,7 +274,7 @@ export default function Settings() {
         <div className="section-label" style={{ marginBottom: 12 }}>ABOUT</div>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
           {[
-            ['Version', '0.1.6'],
+            ['Version', '0.1.7'],
             ['Network', 'Robinhood Chain (EVM)'],
           ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>

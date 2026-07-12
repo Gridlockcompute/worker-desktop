@@ -282,6 +282,13 @@ ipcMain.handle('settings:save', async (_e, cfg: WorkerSettings) => {
     return { ok: true, teeRestarted: true }
   }
 
+  const computeChanged =
+    prev.computeDevice !== next.computeDevice || (prev.gpuIndex ?? 0) !== (next.gpuIndex ?? 0)
+  if (computeChanged) {
+    startDaemon(next)
+    return { ok: true, computeRestarted: true }
+  }
+
   const syncedWallet = normalizedWallet
     ? await syncWalletToDaemon(normalizedWallet, normalizedEarnings ?? undefined)
     : false

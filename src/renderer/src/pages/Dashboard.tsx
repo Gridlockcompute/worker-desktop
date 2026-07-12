@@ -199,8 +199,13 @@ export default function Dashboard() {
         const s = await api.daemon.status()
         if (s.gpu) setGpu(s.gpu)
         if (s.cpu) setCpu(s.cpu)
-        setGpuDetected(Boolean(s.gpu_detected ?? s.gpu?.detected))
-        setEffectiveCompute(s.effective_compute === 'cpu' ? 'cpu' : 'gpu')
+        setGpuDetected(Boolean(s.gpu_detected ?? (s.gpu?.vendor !== 'cpu' && s.gpu?.detected)))
+        const usingCpuNow =
+          s.effective_compute === 'cpu' ||
+          s.gpu?.vendor === 'cpu' ||
+          s.compute_mode === 'cpu' ||
+          (s.compute_mode === 'auto' && !s.gpu_detected)
+        setEffectiveCompute(usingCpuNow ? 'cpu' : 'gpu')
         setWorkerOn(s.running)
         setToggleBusy(prev => {
           if (prev === 'starting' && s.running) return null

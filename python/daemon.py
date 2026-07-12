@@ -847,7 +847,7 @@ if __name__ == "__main__":
     state["tee_mode_requested"] = bool(args.tee or TEE_MODE_REQUESTED)
     detect_hardware()
     refresh_tee_capable()
-    inference.set_compute_mode(state["compute_mode"])
+    inference.set_compute_mode(state["effective_compute"])
     if state["worker_address"]:
         register_with_backend()
         if state["backend_ok"]:

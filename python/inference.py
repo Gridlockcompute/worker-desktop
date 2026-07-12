@@ -24,6 +24,7 @@ _compute_mode: str = "auto"  # auto | cpu | gpu
 def set_compute_mode(mode: str) -> None:
     global _compute_mode
     m = (mode or "auto").strip().lower()
+    # Callers should pass resolved effective mode (cpu/gpu). Bare "auto" falls back to CPU-only Ollama layers.
     _compute_mode = m if m in ("auto", "cpu", "gpu") else "auto"
 
 
@@ -34,6 +35,8 @@ def get_compute_mode() -> str:
 def _ollama_num_gpu() -> int:
     """0 = CPU-only layers; -1 = Ollama default (GPU when available)."""
     if _compute_mode == "cpu":
+        return 0
+    if _compute_mode == "auto":
         return 0
     return -1
 
