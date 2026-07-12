@@ -42,7 +42,7 @@ function createWindow(): void {
     minWidth: 880,
     minHeight: 580,
     backgroundColor: themeBackground(theme),
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarStyle: 'hidden',
     frame: false,
     icon: iconPath(),
     show: false,
@@ -52,6 +52,10 @@ function createWindow(): void {
       contextIsolation: true
     }
   })
+
+  if (process.platform === 'darwin') {
+    mainWindow.setWindowButtonVisibility(false)
+  }
 
   mainWindow.on('ready-to-show', () => mainWindow!.show())
   mainWindow.on('close', (e) => {
