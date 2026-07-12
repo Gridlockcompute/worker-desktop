@@ -13,10 +13,17 @@ export const GRIDLOCK_STAKE_URL = (
   process.env.GRIDLOCK_STAKE_URL ?? 'https://grid-lock.tech/stake'
 ).replace(/\/$/, '')
 
+/** Web dashboard — withdraw earnings and manage payout wallet (SIWE). */
+export const GRIDLOCK_DASHBOARD_URL = (
+  process.env.GRIDLOCK_DASHBOARD_URL ?? 'https://grid-lock.tech/dashboard'
+).replace(/\/$/, '')
+
 export type ComputeDevice = 'auto' | 'cpu' | 'gpu'
 
 export interface WorkerSettings {
   wallet: string
+  /** Optional payout wallet; defaults to operator wallet at registration. */
+  earningsWallet: string
   teeMode: boolean
   autoStart: boolean
   maxVramPct: number
@@ -27,6 +34,7 @@ export interface WorkerSettings {
 
 const DEFAULTS: WorkerSettings = {
   wallet: '',
+  earningsWallet: '',
   teeMode: false,
   autoStart: false,
   maxVramPct: 90,

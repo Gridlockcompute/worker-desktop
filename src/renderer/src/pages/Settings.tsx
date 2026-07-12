@@ -32,6 +32,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 export default function Settings() {
   const [wallet, setWallet] = useState('')
+  const [earningsWallet, setEarningsWallet] = useState('')
   const [teeMode, setTeeMode] = useState(false)
   const [autoStart, setAutoStart] = useState(false)
   const [maxVram, setMaxVram] = useState('90')
@@ -49,6 +50,7 @@ export default function Settings() {
     } }).gridlock
     gl?.settings.load().then((cfg) => {
       if (typeof cfg.wallet === 'string') setWallet(cfg.wallet)
+      if (typeof cfg.earningsWallet === 'string') setEarningsWallet(cfg.earningsWallet)
       if (typeof cfg.teeMode === 'boolean') setTeeMode(cfg.teeMode)
       if (typeof cfg.autoStart === 'boolean') setAutoStart(cfg.autoStart)
       if (typeof cfg.maxVramPct === 'number') setMaxVram(String(cfg.maxVramPct))
@@ -68,7 +70,7 @@ export default function Settings() {
 
   const save = async () => {
     const gl = (window as unknown as { gridlock?: { settings: { save: (cfg: unknown) => Promise<{ ok: boolean }> } } }).gridlock
-    const cfg = { wallet, teeMode, autoStart, maxVramPct: Number(maxVram), tier, computeDevice, gpuIndex }
+    const cfg = { wallet, earningsWallet, teeMode, autoStart, maxVramPct: Number(maxVram), tier, computeDevice, gpuIndex }
     try { await gl?.settings.save(cfg) } catch {}
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -81,8 +83,11 @@ export default function Settings() {
       {/* Wallet */}
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 14 }}>WALLET</div>
-        <Field label="EVM Wallet Address" sub="Your 0x address on Robinhood Chain. Earnings and stake are managed on the web dashboard.">
-          <input value={wallet} onChange={e => setWallet(e.target.value)} placeholder="0x wallet address…" className="mono" style={{ fontSize: 12 }} />
+        <Field label="EVM Wallet Address" sub="Operator wallet (0x…) used to register with the router. No private key required.">
+          <input value={wallet} onChange={e => setWallet(e.target.value)} placeholder="0x operator wallet…" className="mono" style={{ fontSize: 12 }} />
+        </Field>
+        <Field label="Earnings Wallet" sub="Where ETH payouts are sent. Leave empty to use the operator wallet. Withdraw from the web dashboard (Worker tab).">
+          <input value={earningsWallet} onChange={e => setEarningsWallet(e.target.value)} placeholder="0x payout wallet (optional)…" className="mono" style={{ fontSize: 12 }} />
         </Field>
       </div>
 

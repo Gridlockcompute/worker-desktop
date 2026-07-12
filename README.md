@@ -13,7 +13,9 @@ Gridlock Worker is the operator-facing desktop client for the Gridlock network. 
 - Jobs and earnings views tied to your EVM wallet
 - System tray — run in the background while serving jobs
 
-The app uses your **EVM wallet address (`0x…`)** only (never your private key). Stake native ETH and withdraw earnings on the web at [https://grid-lock.tech/worker](https://grid-lock.tech/worker) and [https://grid-lock.tech/stake](https://grid-lock.tech/stake).
+The app uses your **EVM wallet address (`0x…`)** only (never your private key). Set an optional **earnings wallet** for ETH payouts. Withdraw earnings and manage SLA history on the web at [https://grid-lock.tech/dashboard](https://grid-lock.tech/dashboard) (Worker tab). Optional fee-share staking: [https://grid-lock.tech/stake](https://grid-lock.tech/stake).
+
+No GRID bond deposit is required. SLA misses deduct penalties from your pending earnings on the router ledger; customers receive automatic credit rebates.
 
 ## Features
 
@@ -33,7 +35,7 @@ The app uses your **EVM wallet address (`0x…`)** only (never your private key)
 - Windows 10+, macOS 12+, or a recent Linux distro
 - NVIDIA or AMD GPU with drivers (optional — CPU mode supported)
 - Internet connection
-- An **EVM wallet address** (`0x…`) — same address as MetaMask on the web worker dashboard
+- An **EVM wallet address** (`0x…`) — same address as on the web worker dashboard
 
 Download the latest release from [GitHub Releases](https://github.com/Gridlockcompute/worker-desktop/releases) (tags: `worker-v*`).
 
@@ -73,7 +75,9 @@ Production router URL defaults to `https://api.grid-lock.tech`. Override for loc
 |----------|---------|-------------|
 | `GRIDLOCK_BACKEND_URL` | `https://api.grid-lock.tech` | Router API |
 | `GRIDLOCK_STAKE_URL` | `https://grid-lock.tech/stake` | Staking web UI |
-| `GRIDLOCK_WALLET` | — | EVM address (`0x…`) |
+| `GRIDLOCK_DASHBOARD_URL` | `https://grid-lock.tech/dashboard` | Withdraw earnings (Worker tab) |
+| `GRIDLOCK_WALLET` | — | Operator EVM address (`0x…`) |
+| `GRIDLOCK_EARNINGS_WALLET` | operator wallet | Payout wallet (`earnings_wallet` at registration) |
 | `GRIDLOCK_COMPUTE_DEVICE` | `auto` | `auto`, `cpu`, or `gpu` |
 | `GRIDLOCK_GPU_INDEX` | `0` | GPU index when multiple devices |
 | `GRIDLOCK_OLLAMA_MODEL` | `llama3.1:8b` (dev) / `llama3.2:3b` (packaged) | Ollama model |
@@ -86,7 +90,7 @@ Settings are persisted in the Electron user data directory (`settings.json`).
 
 ## On-chain registration
 
-The desktop app does **not** sign Robinhood Chain transactions. When the router has on-chain worker registry enabled (`EVM_*` env + flags), the **router** may register your worker after `POST /v1/workers/register`. Staking, payouts, and billing are handled via the web dashboard.
+The desktop app does **not** sign Robinhood Chain transactions. When the router has on-chain worker registry enabled (`EVM_*` env + flags), the **router** may register your worker after `POST /v1/workers/register`. Payouts, penalties, and billing are handled via the router earnings ledger and web dashboard (SIWE).
 
 ## Usage
 
@@ -94,9 +98,9 @@ The desktop app does **not** sign Robinhood Chain transactions. When the router 
 
 1. Install from GitHub Releases
 2. Open the app → complete Setup (Ollama + model)
-3. Settings → enter `0x` EVM wallet address, choose compute device and SLA tier
-4. **Start Worker** — daemon registers, heartbeats, and accepts WebSocket jobs
-5. Monitor jobs and earnings in-app; view network status at [https://grid-lock.tech/worker](https://grid-lock.tech/worker)
+3. Settings → enter operator `0x` wallet, optional earnings wallet, choose compute device and SLA tier
+4. **Start Worker** — daemon registers with `earnings_wallet`, heartbeats, and accepts WebSocket jobs
+5. Monitor jobs in-app; withdraw ETH from **Dashboard → Worker** on the web
 
 **Local router dev:**
 

@@ -36,6 +36,7 @@ import hardware_detect
 
 BACKEND_URL   = os.getenv("GRIDLOCK_BACKEND_URL", "https://api.grid-lock.tech")
 WALLET_ADDR   = os.getenv("GRIDLOCK_WALLET", "")
+EARNINGS_WALLET = os.getenv("GRIDLOCK_EARNINGS_WALLET", "")
 ROLE          = os.getenv("GRIDLOCK_ROLE", "Prefill")
 TEE_CAPABLE   = os.getenv("GRIDLOCK_TEE", "false").lower() == "true"
 COMPUTE_MODE  = hardware_detect.normalize_compute_mode(os.getenv("GRIDLOCK_COMPUTE_DEVICE", "auto"))
@@ -51,6 +52,7 @@ state = {
     "inference_error": None,
     "inference_backend": None,
     "worker_address": WALLET_ADDR or "",
+    "earnings_wallet": EARNINGS_WALLET or "",
     "compute_mode":   COMPUTE_MODE,
     "gpu_index":      GPU_INDEX,
     "cpu":            hardware_detect.empty_cpu("Detecting…"),
@@ -180,6 +182,7 @@ def register_with_backend():
 
     body = {
         "operator_address": addr,
+        "earnings_wallet": evm_wallet.normalize_evm_address(state.get("earnings_wallet") or "") or addr,
         "role":            ROLE,
         "hardware_tier":   hw_tier,
         "tee_capable":     TEE_CAPABLE,
@@ -586,6 +589,7 @@ class Handler(BaseHTTPRequestHandler):
                 "inference_error":   state["inference_error"],
                 "inference_backend": state["inference_backend"],
                 "worker_address":    state["worker_address"],
+                "earnings_wallet":   state.get("earnings_wallet") or state["worker_address"],
                 "tee_capable":       TEE_CAPABLE,
                 "compute_mode":      state["compute_mode"],
                 "effective_compute": state["effective_compute"],
@@ -696,11 +700,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "error": "invalid_wallet", "message": "Expected a valid 0x EVM address."}, 400)
                 return
             state["worker_address"] = addr
+            earnings = evm_wallet.normalize_evm_address(str(body.get("earnings_wallet", "")))
+            if earnings:
+                state["earnings_wallet"] = earnings
+            elif not state.get("earnings_wallet"):
+                state["earnings_wallet"] = addr
             register_with_backend()
             self._json({
                 "ok": True,
                 "backend_ok": state["backend_ok"],
                 "worker_address": state["worker_address"],
+                "earnings_wallet": state.get("earnings_wallet") or state["worker_address"],
                 "message": state["last_backend_error"] if not state["backend_ok"] else None,
             })
 
@@ -719,6 +729,7 @@ if __name__ == "__main__":
     parser.add_argument("--port",    type=int, default=7420)
     parser.add_argument("--backend", default=BACKEND_URL)
     parser.add_argument("--wallet",  default=WALLET_ADDR)
+    parser.add_argument("--earnings-wallet", default=EARNINGS_WALLET)
     parser.add_argument("--tee",     action="store_true", default=TEE_CAPABLE)
     parser.add_argument("--compute", default=COMPUTE_MODE, choices=["auto", "cpu", "gpu"])
     parser.add_argument("--gpu-index", type=int, default=GPU_INDEX)
@@ -726,6 +737,7 @@ if __name__ == "__main__":
 
     BACKEND_URL              = args.backend.rstrip("/")
     state["worker_address"]  = args.wallet or ""
+    state["earnings_wallet"] = args.earnings_wallet or args.wallet or ""
     state["compute_mode"]    = hardware_detect.normalize_compute_mode(args.compute)
     state["gpu_index"]       = max(0, args.gpu_index)
     TEE_CAPABLE              = args.tee or TEE_CAPABLE

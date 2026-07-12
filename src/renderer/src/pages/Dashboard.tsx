@@ -385,7 +385,7 @@ export default function Dashboard() {
             CONNECT WALLET
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.55 }}>
-            Enter your EVM wallet address (0x…) to register as a worker and receive earnings.
+            Enter your operator wallet (0x…) to register as a worker. Set an optional earnings wallet in Settings for payouts.
           </p>
           <input
             value={walletInput}
@@ -481,7 +481,7 @@ export default function Dashboard() {
         {[
           { label: 'JOBS TODAY',   val: jobsToday.toString() },
           { label: 'TOKENS / SEC', val: workerOn && tokensPerSec > 0 ? (tokensPerSec >= 10 ? Math.round(tokensPerSec).toLocaleString() : tokensPerSec.toFixed(1)) : '—' },
-          { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} $GRID` },
+          { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} credits` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>

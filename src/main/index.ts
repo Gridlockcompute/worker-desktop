@@ -1,10 +1,11 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell, type NativeImage } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
-import { loadSettings, saveSettings, GRIDLOCK_API_URL, GRIDLOCK_STAKE_URL, type WorkerSettings } from './settings.js'
+import { loadSettings, saveSettings, GRIDLOCK_API_URL, GRIDLOCK_STAKE_URL, GRIDLOCK_DASHBOARD_URL, type WorkerSettings } from './settings.js'
 import { getDaemonScriptPath, getPythonExecutable, getPythonModuleDir, packagedDaemonEnv } from './python.js'
 import { registerSetupHandlers } from './setup.js'
 import { fetchWalletJobs, mergeWalletJobs, type WorkerJob } from './wallet-jobs.js'
+import { fetchWorkerEarningsFromRouter, type WorkerEarningsView } from './worker-earnings.js'
 import { isValidEvmWallet, normalizeEvmWallet } from '@shared/evm-wallet'
 
 const isDev = !app.isPackaged
@@ -100,6 +101,10 @@ function startDaemon(settings = loadSettings()): void {
     const wallet = normalizeWallet(settings.wallet.trim())
     if (wallet) args.push('--wallet', wallet)
   }
+  const earningsWallet = normalizeWallet(settings.earningsWallet?.trim() ?? '')
+  if (earningsWallet) {
+    args.push('--earnings-wallet', earningsWallet)
+  }
   if (settings.teeMode) {
     args.push('--tee')
   }
@@ -114,6 +119,7 @@ function startDaemon(settings = loadSettings()): void {
       env: packagedDaemonEnv({
         GRIDLOCK_BACKEND_URL: GRIDLOCK_API_URL,
         GRIDLOCK_WALLET: settings.wallet,
+        GRIDLOCK_EARNINGS_WALLET: settings.earningsWallet ?? '',
         GRIDLOCK_TEE: settings.teeMode ? 'true' : 'false',
         GRIDLOCK_COMPUTE_DEVICE: settings.computeDevice,
         GRIDLOCK_GPU_INDEX: String(settings.gpuIndex ?? 0),
@@ -192,16 +198,38 @@ ipcMain.handle('worker:jobs', async () => {
     return { jobs: localJobs }
   }
 })
-ipcMain.handle('worker:earnings',() => fetchDaemon('/earnings').catch(() => ({ today: 0, week: 0, total: 0, history: [] })))
+ipcMain.handle('worker:earnings', async () => {
+  const wallet = loadSettings().wallet.trim()
+  if (isValidWallet(wallet)) {
+    const remote = await fetchWorkerEarningsFromRouter(wallet)
+    if (remote) return remote
+  }
+  const local = (await fetchDaemon('/earnings').catch(() => null)) as Partial<WorkerEarningsView> | null
+  return {
+    today: local?.today ?? 0,
+    week: local?.week ?? 0,
+    total: local?.total ?? 0,
+    penalties_paid: local?.penalties_paid ?? 0,
+    earnings_wallet: null,
+    sla_pass_rate: null,
+    jobs_today: 0,
+    history: local?.history ?? [],
+    source: 'local' as const,
+  }
+})
 ipcMain.handle('settings:load', () => loadSettings())
-async function syncWalletToDaemon(wallet: string): Promise<boolean> {
+async function syncWalletToDaemon(wallet: string, earningsWallet?: string): Promise<boolean> {
   const normalized = normalizeWallet(wallet)
   if (!normalized) return false
+  const normalizedEarnings = earningsWallet?.trim() ? normalizeWallet(earningsWallet.trim()) : null
   try {
     const res = await fetch(`http://127.0.0.1:${DAEMON_PORT}/wallet`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: normalized }),
+      body: JSON.stringify({
+        address: normalized,
+        ...(normalizedEarnings ? { earnings_wallet: normalizedEarnings } : {}),
+      }),
     })
     return res.ok
   } catch {
@@ -227,15 +255,23 @@ async function syncConfigToDaemon(settings: WorkerSettings): Promise<boolean> {
 
 ipcMain.handle('settings:save', async (_e, cfg: WorkerSettings) => {
   const normalizedWallet = normalizeWallet(cfg.wallet)
-  const next = normalizedWallet ? { ...cfg, wallet: normalizedWallet } : cfg
+  const normalizedEarnings = cfg.earningsWallet?.trim() ? normalizeWallet(cfg.earningsWallet.trim()) : null
+  const next: WorkerSettings = {
+    ...cfg,
+    wallet: normalizedWallet ?? cfg.wallet,
+    earningsWallet: normalizedEarnings ?? '',
+  }
   saveSettings(next)
-  const syncedWallet = normalizedWallet ? await syncWalletToDaemon(normalizedWallet) : false
+  const syncedWallet = normalizedWallet
+    ? await syncWalletToDaemon(normalizedWallet, normalizedEarnings ?? undefined)
+    : false
   const syncedConfig = await syncConfigToDaemon(next)
   if (!syncedWallet || !syncedConfig) startDaemon(next)
   return { ok: true }
 })
 
 ipcMain.handle('app:openStakePage', () => shell.openExternal(GRIDLOCK_STAKE_URL))
+ipcMain.handle('app:openDashboard', () => shell.openExternal(GRIDLOCK_DASHBOARD_URL))
 
 ipcMain.handle('window:minimize', () => mainWindow?.minimize())
 ipcMain.handle('window:maximize', () => mainWindow?.isMaximized() ? mainWindow.restore() : mainWindow?.maximize())

@@ -4,50 +4,64 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 
 type DayData = { day: string; earn: number; jobs: number }
 
+type EarningsView = {
+  today: number
+  week: number
+  total: number
+  penalties_paid: number
+  earnings_wallet: string | null
+  sla_pass_rate: number | null
+  jobs_today: number
+  history: DayData[]
+  source: 'router' | 'local'
+}
+
 function openStakePage(): void {
   const gl = (window as unknown as { gridlock?: { app: { openStakePage: () => Promise<void> } } }).gridlock
   void gl?.app.openStakePage()
 }
 
+function openDashboard(): void {
+  const gl = (window as unknown as { gridlock?: { app: { openDashboard: () => Promise<void> } } }).gridlock
+  void gl?.app.openDashboard()
+}
+
+function shortAddr(addr: string): string {
+  if (addr.length < 12) return addr
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`
+}
+
 export default function Earnings() {
-  const [history, setHistory] = useState<DayData[]>([])
-  const [total, setTotal] = useState(0)
-  const [today, setToday] = useState(0)
-  const [week, setWeek] = useState(0)
-  const [staked, setStaked] = useState(0)
-  const [pendingUnstake, setPendingUnstake] = useState(0)
+  const [data, setData] = useState<EarningsView | null>(null)
 
   useEffect(() => {
-    const gl = (window as unknown as { gridlock?: { worker: { earnings: () => Promise<{ today: number; week: number; total: number; history: DayData[] }> } } }).gridlock
+    const gl = (window as unknown as { gridlock?: { worker: { earnings: () => Promise<EarningsView> } } }).gridlock
     if (!gl) return
     const poll = () => {
-      gl.worker.earnings().then(r => {
-        setTotal(r.total ?? 0)
-        setToday(r.today ?? 0)
-        setWeek(r.week ?? 0)
-        if (r.history?.length) setHistory(r.history)
-      }).catch(() => {})
+      gl.worker.earnings().then(setData).catch(() => {})
     }
     poll()
     const iv = setInterval(poll, 5000)
     return () => clearInterval(iv)
   }, [])
 
-  const weekEarn = week || history.reduce((s, d) => s + d.earn, 0)
-  const apyDaily  = staked > 0 ? (staked * 0.08) / 365 : 0
-  const maxBar    = history.length ? Math.max(...history.map(d => d.earn)) : 0
+  const today = data?.today ?? 0
+  const week = data?.week ?? 0
+  const total = data?.total ?? 0
+  const penalties = data?.penalties_paid ?? 0
+  const history = data?.history ?? []
+  const maxBar = history.length ? Math.max(...history.map(d => d.earn), 0.0001) : 0.0001
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
       <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 20 }}>Earnings</div>
 
-      {/* Top stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
         {[
-          { label: 'TODAY',     val: `${today.toFixed(4)} $GRID`,    sub: 'earned' },
-          { label: 'THIS WEEK', val: `${weekEarn.toFixed(4)} $GRID`,     sub: 'earned' },
-          { label: 'ALL TIME',  val: `${total.toFixed(4)} $GRID`,         sub: 'total' },
-          { label: 'STAKED',    val: staked > 0 ? `${staked.toLocaleString()} $GRID` : '—',  sub: staked > 0 ? '8% APY' : 'not staked' },
+          { label: 'TODAY', val: `${today.toFixed(4)} credits`, sub: 'worker share' },
+          { label: 'THIS WEEK', val: `${week.toFixed(4)} credits`, sub: 'last 7 days' },
+          { label: 'ALL TIME', val: `${total.toFixed(4)} credits`, sub: data?.source === 'router' ? 'from router' : 'local estimate' },
+          { label: 'SLA PASS', val: data?.sla_pass_rate != null ? `${data.sla_pass_rate.toFixed(1)}%` : '—', sub: 'today' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
             <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
@@ -57,7 +71,6 @@ export default function Earnings() {
         ))}
       </div>
 
-      {/* Bar chart */}
       {history.length > 0 && (
       <div className="card" style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 14 }}>DAILY EARNINGS — LAST 7 DAYS</div>
@@ -79,7 +92,7 @@ export default function Earnings() {
                     minWidth: 120,
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', marginBottom: 4 }}>{d.day}</div>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: '#CCFF00' }}>{d.earn} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(204, 255, 0, 0.45)' }}>$GRID</span></div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: '#CCFF00' }}>{d.earn.toFixed(4)} <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(204, 255, 0, 0.45)' }}>credits</span></div>
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{d.jobs} jobs</div>
                   </div>
                 )
@@ -95,44 +108,39 @@ export default function Earnings() {
       </div>
       )}
 
-      {/* Staking */}
       <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 14 }}>STAKING</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}>Staked balance</div>
-            <div style={{ fontSize: 20, fontWeight: 900 }}>{staked.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$GRID</span></div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>~{apyDaily.toFixed(2)} $GRID/day APY</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 5 }}>Pending unstake</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: pendingUnstake > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-              {pendingUnstake.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>$GRID</span>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>21-day cooldown</div>
-          </div>
+        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 14 }}>PAYOUTS</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 14 }}>
+          Earnings accumulate as credits on the router ledger. SLA misses deduct penalties from your pending balance automatically — no bond required.
+          {data?.earnings_wallet && (
+            <> Payout wallet: <span className="mono" style={{ color: 'var(--accent)' }}>{shortAddr(data.earnings_wallet)}</span>.</>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--accent)', color: '#000000', border: '1px solid var(--accent)', borderRadius: 5, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            STAKE MORE
-          </button>
-          <button type="button" onClick={openStakePage} style={{ flex: 1, padding: '8px 0', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 5, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-            UNSTAKE
-          </button>
-        </div>
+        <button type="button" onClick={openDashboard} style={{ width: '100%', padding: '8px 0', background: 'var(--accent)', color: '#000000', border: '1px solid var(--accent)', borderRadius: 5, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+          WITHDRAW ON WEB DASHBOARD →
+        </button>
       </div>
 
-      {/* Penalty credits */}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 14 }}>OPTIONAL STAKING</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 14 }}>
+          Stake ETH on the web for fee-share boosts. Separate from SLA penalties — missing a tier still deducts from pending earnings.
+        </div>
+        <button type="button" onClick={openStakePage} style={{ width: '100%', padding: '8px 0', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)', borderRadius: 5, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+          OPEN STAKE PAGE →
+        </button>
+      </div>
+
       <div className="card">
-        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>PENALTY CREDITS RECEIVED</div>
+        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>SLA PENALTIES DEDUCTED</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>+3.21 $GRID</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>from 4 worker penalties this week</div>
-          </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'right' }}>
-            <div>Auto-credited via</div>
-            <div>PermanentDelegate</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: penalties > 0 ? '#f87171' : 'var(--text-muted)' }}>
+              {penalties > 0 ? `−${penalties.toFixed(4)}` : '0.0000'} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>credits</span>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 3 }}>
+              Deducted from pending earnings when you miss TTFT targets
+            </div>
           </div>
         </div>
       </div>

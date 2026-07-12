@@ -5,6 +5,7 @@ export type WorkerJob = {
   status: 'completed' | 'failed' | 'running'
   tokens: number
   earn: number
+  penalty_paid: number
   tier: string
   duration_ms: number
   ts: number
@@ -29,6 +30,7 @@ function mapBackendJob(row: Record<string, unknown>): WorkerJob {
     status,
     tokens,
     earn: Number(row.fee ?? 0),
+    penalty_paid: Number(row.penalty_paid ?? 0),
     tier: String(row.sla_tier ?? 'standard'),
     duration_ms: ttft + tpot * Math.max(tokens, 1),
     ts: Number(row.ts ?? 0),

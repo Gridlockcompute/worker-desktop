@@ -5,12 +5,25 @@ export type ComputeDevice = 'auto' | 'cpu' | 'gpu'
 
 export type WorkerSettings = {
   wallet: string
+  earningsWallet: string
   teeMode: boolean
   autoStart: boolean
   maxVramPct: number
   tier: string
   computeDevice: ComputeDevice
   gpuIndex: number
+}
+
+export type WorkerEarningsView = {
+  today: number
+  week: number
+  total: number
+  penalties_paid: number
+  earnings_wallet: string | null
+  sla_pass_rate: number | null
+  jobs_today: number
+  history: { day: string; earn: number; jobs: number }[]
+  source: 'router' | 'local'
 }
 
 export type GPUInfo = {
@@ -71,7 +84,7 @@ const api = {
       ipcRenderer.invoke('worker:start'),
     stop:     (): Promise<{ ok: boolean }> => ipcRenderer.invoke('worker:stop'),
     jobs:     (): Promise<{ jobs: unknown[] }> => ipcRenderer.invoke('worker:jobs'),
-    earnings: (): Promise<{ today: number; week: number; total: number; history: unknown[] }> =>
+    earnings: (): Promise<WorkerEarningsView> =>
       ipcRenderer.invoke('worker:earnings')
   },
   settings: {
@@ -101,7 +114,8 @@ const api = {
     },
   },
   app: {
-    openStakePage: (): Promise<void> => ipcRenderer.invoke('app:openStakePage')
+    openStakePage: (): Promise<void> => ipcRenderer.invoke('app:openStakePage'),
+    openDashboard: (): Promise<void> => ipcRenderer.invoke('app:openDashboard'),
   }
 }
 
