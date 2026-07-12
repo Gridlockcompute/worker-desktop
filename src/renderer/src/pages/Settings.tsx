@@ -244,7 +244,7 @@ export default function Settings() {
         <div className="section-label" style={{ marginBottom: 12 }}>ABOUT</div>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
           {[
-            ['Version', '0.1.4'],
+            ['Version', '0.1.5'],
             ['Network', 'Robinhood Chain (EVM)'],
           ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>

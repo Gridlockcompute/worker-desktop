@@ -52,7 +52,7 @@ export default function SetupPanel() {
   const installOllama = async () => {
     setBusy('ollama')
     setError(null)
-    setProgress('Downloading Ollama installer…')
+    setProgress('Downloading Ollama…')
     try {
       const res = await setupApi()?.installOllama()
       if (!res?.ok) setError(res?.message ?? 'Ollama install failed.')
@@ -119,8 +119,8 @@ export default function SetupPanel() {
         status.ollamaRunning
           ? 'Ollama is running.'
           : status.ollamaInstalled
-            ? 'Ollama is installed but not running. Open Ollama from the Start menu.'
-            : 'Required to run models on your PC. One-click install (~200 MB).',
+            ? 'Ollama is installed but not running. Open the Ollama app.'
+            : 'Required to run models on your PC. One-click install.',
         !status.ollamaRunning && (
           <button
             type="button"

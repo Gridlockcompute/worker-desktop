@@ -1,14 +1,16 @@
 import { app, ipcMain, shell, type BrowserWindow } from 'electron'
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import { createWriteStream, existsSync } from 'fs'
-import { mkdir, unlink } from 'fs/promises'
+import { mkdir, rm, unlink } from 'fs/promises'
 import { dirname, join } from 'path'
-import { tmpdir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { get } from 'https'
 import { PACKAGED_OLLAMA_MODEL } from './python.js'
 
-const OLLAMA_INSTALLER_URL = 'https://ollama.com/download/OllamaSetup.exe'
+const OLLAMA_WINDOWS_INSTALLER_URL = 'https://ollama.com/download/OllamaSetup.exe'
+const OLLAMA_MAC_DMG_URL = 'https://ollama.com/download/Ollama.dmg'
 const OLLAMA_API = 'http://127.0.0.1:11434'
+const MAC_OLLAMA_APP = '/Applications/Ollama.app'
 
 export type SetupStatus = {
   pythonReady: boolean
@@ -19,23 +21,55 @@ export type SetupStatus = {
   ready: boolean
 }
 
+function whichOnPath(command: string): string | null {
+  const lookup = process.platform === 'win32' ? 'where' : 'which'
+  const result = spawnSync(lookup, [command], { encoding: 'utf8' })
+  const line = result.stdout?.split(/\r?\n/).map((s) => s.trim()).find(Boolean)
+  if (!line) return null
+  if (process.platform === 'win32') return existsSync(line) ? line : null
+  return existsSync(line) ? line : null
+}
+
 function ollamaExeCandidates(): string[] {
-  const local = process.env.LOCALAPPDATA ?? ''
-  const pf = process.env.ProgramFiles ?? 'C:\\Program Files'
+  if (process.platform === 'win32') {
+    const local = process.env.LOCALAPPDATA ?? ''
+    const pf = process.env.ProgramFiles ?? 'C:\\Program Files'
+    return [
+      join(local, 'Programs', 'Ollama', 'ollama.exe'),
+      join(pf, 'Ollama', 'ollama.exe'),
+    ]
+  }
+
+  if (process.platform === 'darwin') {
+    return [
+      '/usr/local/bin/ollama',
+      '/opt/homebrew/bin/ollama',
+      join(MAC_OLLAMA_APP, 'Contents', 'Resources', 'ollama'),
+      join(homedir(), 'Applications', 'Ollama.app', 'Contents', 'Resources', 'ollama'),
+    ]
+  }
+
   return [
-    join(local, 'Programs', 'Ollama', 'ollama.exe'),
-    join(pf, 'Ollama', 'ollama.exe'),
-    'ollama',
+    '/usr/local/bin/ollama',
+    '/usr/bin/ollama',
+    join(homedir(), '.local', 'bin', 'ollama'),
+    '/snap/bin/ollama',
   ]
 }
 
 export function findOllamaExecutable(): string | null {
-  if (process.platform !== 'win32') return 'ollama'
   for (const candidate of ollamaExeCandidates()) {
-    if (candidate === 'ollama') continue
     if (existsSync(candidate)) return candidate
   }
-  return null
+  return whichOnPath(process.platform === 'win32' ? 'ollama.exe' : 'ollama')
+}
+
+function isOllamaInstalled(): boolean {
+  if (findOllamaExecutable()) return true
+  if (process.platform === 'darwin') {
+    return existsSync(MAC_OLLAMA_APP) || existsSync(join(homedir(), 'Applications', 'Ollama.app'))
+  }
+  return false
 }
 
 async function ollamaApiOk(timeoutMs = 4000): Promise<boolean> {
@@ -66,7 +100,7 @@ async function modelIsPulled(modelName: string): Promise<boolean> {
 
 export async function checkSetup(): Promise<SetupStatus> {
   const modelName = PACKAGED_OLLAMA_MODEL
-  const ollamaInstalled = process.platform !== 'win32' || findOllamaExecutable() !== null
+  const ollamaInstalled = isOllamaInstalled()
   const ollamaRunning = await ollamaApiOk()
   const modelReady = ollamaRunning && await modelIsPulled(modelName)
   const pythonReady = !app.isPackaged || process.platform !== 'win32' || existsSync(
@@ -106,6 +140,21 @@ function downloadFile(url: string, dest: string): Promise<void> {
   })
 }
 
+function execCommand(command: string, args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: 'ignore' })
+    child.on('error', reject)
+    child.on('exit', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`${command} failed (exit ${code ?? 'unknown'})`))
+    })
+  })
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
 async function waitForOllama(maxMs = 120_000): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < maxMs) {
@@ -117,6 +166,33 @@ async function waitForOllama(maxMs = 120_000): Promise<boolean> {
 
 export function launchOllamaApp(): Promise<boolean> {
   return new Promise((resolve) => {
+    if (process.platform === 'darwin') {
+      const appPath = existsSync(MAC_OLLAMA_APP)
+        ? MAC_OLLAMA_APP
+        : join(homedir(), 'Applications', 'Ollama.app')
+      if (!existsSync(appPath)) {
+        resolve(false)
+        return
+      }
+      const child = spawn('open', ['-a', appPath], { detached: true, stdio: 'ignore' })
+      child.on('error', () => resolve(false))
+      child.on('exit', (code) => resolve(code === 0))
+      return
+    }
+
+    if (process.platform === 'linux') {
+      const exe = findOllamaExecutable()
+      if (!exe) {
+        resolve(false)
+        return
+      }
+      const child = spawn(exe, ['serve'], { detached: true, stdio: 'ignore' })
+      child.on('error', () => resolve(false))
+      child.unref()
+      resolve(true)
+      return
+    }
+
     const cli = findOllamaExecutable()
     if (!cli) {
       resolve(false)
@@ -124,65 +200,145 @@ export function launchOllamaApp(): Promise<boolean> {
     }
     const gui = join(dirname(cli), 'Ollama.exe')
     const target = existsSync(gui) ? gui : cli
-    try {
-      const child = spawn(target, [], { detached: true, stdio: 'ignore' })
-      child.unref()
-      resolve(true)
-    } catch {
-      resolve(false)
-    }
+    const child = spawn(target, [], { detached: true, stdio: 'ignore' })
+    child.on('error', () => resolve(false))
+    child.unref()
+    resolve(true)
   })
+}
+
+function launchHint(): string {
+  if (process.platform === 'darwin') return 'Open Ollama from Applications, then click Retry.'
+  if (process.platform === 'linux') return 'Start Ollama, then click Retry.'
+  return 'Open Ollama from the Start menu, then click Retry.'
 }
 
 export async function ensureOllamaRunning(): Promise<{ ok: boolean; message?: string }> {
   if (await ollamaApiOk(2000)) return { ok: true }
 
-  if (findOllamaExecutable()) {
+  if (isOllamaInstalled()) {
     await launchOllamaApp()
     const up = await waitForOllama(60_000)
     if (up) return { ok: true }
-    return { ok: false, message: 'Open Ollama from the Start menu, then click Retry.' }
+    return { ok: false, message: launchHint() }
   }
 
   return installOllamaFresh()
 }
 
-async function installOllamaFresh(): Promise<{ ok: boolean; message?: string }> {
-  if (process.platform !== 'win32') {
-    await shell.openExternal('https://ollama.com/download')
-    return { ok: false, message: 'Install Ollama from the browser, then return here.' }
-  }
-
+async function installOllamaWindows(): Promise<{ ok: boolean; message?: string }> {
   const dir = join(tmpdir(), 'gridlock-worker')
   await mkdir(dir, { recursive: true })
   const installer = join(dir, 'OllamaSetup.exe')
 
   try {
-    await downloadFile(OLLAMA_INSTALLER_URL, installer)
+    await downloadFile(OLLAMA_WINDOWS_INSTALLER_URL, installer)
   } catch (e) {
     await shell.openExternal('https://ollama.com/download')
     return { ok: false, message: `Could not download Ollama. Install manually: ${String(e)}` }
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(installer, ['/VERYSILENT', '/NORESTART'], {
-      detached: true,
-      stdio: 'ignore',
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(installer, ['/VERYSILENT', '/NORESTART'], {
+        detached: true,
+        stdio: 'ignore',
+      })
+      child.on('error', reject)
+      child.on('exit', (code) => {
+        if (code === 0 || code === null) resolve()
+        else reject(new Error(`Ollama installer exited with code ${code}`))
+      })
     })
-    child.on('error', reject)
-    child.on('exit', (code) => {
-      if (code === 0 || code === null) resolve()
-      else reject(new Error(`Ollama installer exited with code ${code}`))
-    })
-  })
-
-  try { await unlink(installer) } catch { /* ignore */ }
+  } catch (e) {
+    return { ok: false, message: `Ollama install failed: ${String(e)}` }
+  } finally {
+    try { await unlink(installer) } catch { /* ignore */ }
+  }
 
   const up = await waitForOllama(180_000)
   if (!up) {
-    return { ok: false, message: 'Ollama installed but not responding. Open Ollama from the Start menu, then retry.' }
+    return { ok: false, message: `Ollama installed but not responding. ${launchHint()}` }
   }
   return { ok: true }
+}
+
+async function installOllamaDarwin(): Promise<{ ok: boolean; message?: string }> {
+  const dir = join(tmpdir(), 'gridlock-worker')
+  const dmgPath = join(dir, 'Ollama.dmg')
+  const mountDir = join(dir, 'ollama-mount')
+
+  try {
+    await mkdir(dir, { recursive: true })
+    await downloadFile(OLLAMA_MAC_DMG_URL, dmgPath)
+    await mkdir(mountDir, { recursive: true })
+    await execCommand('hdiutil', ['attach', dmgPath, '-mountpoint', mountDir, '-nobrowse', '-quiet'])
+
+    const appSrc = join(mountDir, 'Ollama.app')
+    if (!existsSync(appSrc)) {
+      throw new Error('Ollama.app not found in downloaded disk image')
+    }
+
+    const installScript = `rm -rf ${shellQuote(MAC_OLLAMA_APP)} && cp -R ${shellQuote(appSrc)} ${shellQuote(MAC_OLLAMA_APP)}`
+    await execCommand('osascript', [
+      '-e',
+      `do shell script "${installScript.replace(/"/g, '\\"')}" with administrator privileges`,
+    ])
+    await execCommand('hdiutil', ['detach', mountDir, '-quiet'])
+  } catch (e) {
+    try { await rm(mountDir, { recursive: true, force: true }) } catch { /* ignore */ }
+    try { await unlink(dmgPath) } catch { /* ignore */ }
+    await shell.openExternal('https://ollama.com/download')
+    return {
+      ok: false,
+      message: `Could not install Ollama automatically (${String(e)}). Use the download page, then retry.`,
+    }
+  } finally {
+    try { await unlink(dmgPath) } catch { /* ignore */ }
+    try { await rm(mountDir, { recursive: true, force: true }) } catch { /* ignore */ }
+  }
+
+  await launchOllamaApp()
+  const up = await waitForOllama(180_000)
+  if (!up) {
+    return { ok: false, message: `Ollama installed but not responding. ${launchHint()}` }
+  }
+  return { ok: true }
+}
+
+async function installOllamaLinux(): Promise<{ ok: boolean; message?: string }> {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('sh', ['-c', 'curl -fsSL https://ollama.com/install.sh | sh'], {
+        stdio: 'ignore',
+        env: process.env,
+      })
+      child.on('error', reject)
+      child.on('exit', (code) => {
+        if (code === 0) resolve()
+        else reject(new Error(`Ollama install script exited with code ${code}`))
+      })
+    })
+  } catch (e) {
+    await shell.openExternal('https://ollama.com/download')
+    return { ok: false, message: `Could not install Ollama automatically: ${String(e)}` }
+  }
+
+  await launchOllamaApp()
+  const up = await waitForOllama(180_000)
+  if (!up) {
+    return { ok: false, message: `Ollama installed but not responding. ${launchHint()}` }
+  }
+  return { ok: true }
+}
+
+async function installOllamaFresh(): Promise<{ ok: boolean; message?: string }> {
+  if (process.platform === 'win32') return installOllamaWindows()
+  if (process.platform === 'darwin') return installOllamaDarwin()
+  if (process.platform === 'linux') return installOllamaLinux()
+
+  await shell.openExternal('https://ollama.com/download')
+  return { ok: false, message: 'Install Ollama from the browser, then return here.' }
 }
 
 export function pullOllamaModel(
@@ -190,7 +346,12 @@ export function pullOllamaModel(
   onLine: (line: string) => void,
 ): Promise<{ ok: boolean; message?: string }> {
   return new Promise((resolve) => {
-    const exe = findOllamaExecutable() ?? 'ollama'
+    const exe = findOllamaExecutable()
+    if (!exe) {
+      resolve({ ok: false, message: 'Ollama CLI not found. Install Ollama first.' })
+      return
+    }
+
     const child = spawn(exe, ['pull', modelName], { stdio: ['ignore', 'pipe', 'pipe'] })
 
     const handle = (buf: Buffer) => {
