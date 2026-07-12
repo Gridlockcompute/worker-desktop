@@ -82,8 +82,8 @@ function CircleGauge({ pct, size = 90, stroke = 6, label, value }: {
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', textAlign: 'center',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 900, lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.8px', color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+        <div className="stat-value" style={{ lineHeight: 1 }}>{value}</div>
+        <div className="section-label section-label--tight" style={{ fontSize: 8, letterSpacing: '0.12em', marginBottom: 0, marginTop: 2 }}>{label}</div>
       </div>
     </div>
   )
@@ -93,8 +93,8 @@ function StatBar({ label, pct, valueLabel }: { label: string; pct: number; value
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>{valueLabel}</span>
+        <span className="section-label" style={{ marginBottom: 0, fontSize: 9, letterSpacing: '0.14em' }}>{label}</span>
+        <span className="text-subtle" style={{ fontSize: 11 }}>{valueLabel}</span>
       </div>
       <div style={{ height: 2, background: 'var(--bg-4)', borderRadius: 1, overflow: 'hidden' }}>
         <motion.div
@@ -323,10 +323,10 @@ export default function Dashboard() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.2px', marginBottom: 4 }}>Dashboard</div>
+          <div className="page-title page-title--compact">Dashboard</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span className={workerOn || toggleBusy === 'starting' ? 'pulse-dot' : ''} style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: statusDotColor }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: toggleBusy ? 'var(--accent)' : 'var(--text-muted)' }}>{statusLabel}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: toggleBusy ? 'var(--accent-text)' : 'var(--text-muted)' }}>{statusLabel}</span>
             {toggleBusy === 'starting' && (
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>
                 · checking Ollama & Gridlock…
@@ -350,7 +350,7 @@ export default function Dashboard() {
           disabled={isBusy || (!workerOn && !canStartWorker)}
           className={isBusy ? 'btn-busy' : undefined}
           style={{
-            padding: '8px 22px', borderRadius: 6, fontWeight: 800, fontSize: 11, letterSpacing: '0.8px',
+            padding: '8px 22px', borderRadius: 6, fontWeight: 600, fontSize: 11, letterSpacing: '0.06em',
             minWidth: 132, textAlign: 'center',
             background: isBusy
               ? 'var(--accent-mid)'
@@ -360,11 +360,11 @@ export default function Dashboard() {
                   ? 'var(--accent)'
                   : 'var(--bg-4)',
             color: isBusy
-              ? '#000000'
+              ? 'var(--on-accent)'
               : workerOn
-                ? 'var(--accent)'
+                ? 'var(--accent-text)'
                 : canStartWorker
-                  ? '#000000'
+                  ? 'var(--on-accent)'
                   : 'var(--text-muted)',
             border: '1px solid var(--border-2)',
             cursor: isBusy || (!workerOn && !canStartWorker) ? 'not-allowed' : 'pointer',
@@ -381,9 +381,7 @@ export default function Dashboard() {
       {/* Wallet gate */}
       {!walletConnected && (
         <div className="card" style={{ marginBottom: 12, border: '1px solid var(--border-2)' }}>
-          <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>
-            CONNECT WALLET
-          </div>
+          <div className="section-label section-label--sm">CONNECT WALLET</div>
           <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.55 }}>
             Enter your operator wallet (0x…) to register as a worker. Set an optional earnings wallet in Settings for payouts.
           </p>
@@ -399,9 +397,9 @@ export default function Dashboard() {
             onClick={connectWallet}
             disabled={!isValidWallet(walletInput) || walletSaving}
             style={{
-              width: '100%', padding: '10px 0', borderRadius: 6, fontWeight: 800, fontSize: 12,
+              width: '100%', padding: '10px 0', borderRadius: 6, fontWeight: 600, fontSize: 12,
               background: isValidWallet(walletInput) ? 'var(--accent)' : 'var(--bg-4)',
-              color: isValidWallet(walletInput) ? '#000000' : 'var(--text-muted)',
+              color: isValidWallet(walletInput) ? 'var(--on-accent)' : 'var(--text-muted)',
               border: '1px solid var(--border-2)', cursor: isValidWallet(walletInput) ? 'pointer' : 'not-allowed',
             }}
           >
@@ -413,7 +411,7 @@ export default function Dashboard() {
       {walletConnected && (
         <div className="card" style={{ marginBottom: 12, padding: '10px 13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>WALLET</div>
+            <div className="section-label" style={{ marginBottom: 4 }}>WALLET</div>
             <div className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{shortEvmWallet(wallet)}</div>
           </div>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--success)' }}>CONNECTED</span>
@@ -421,21 +419,19 @@ export default function Dashboard() {
       )}
 
       {startError && (
-        <div style={{ marginBottom: 12, padding: '10px 13px', borderRadius: 6, background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.25)', fontSize: 12, color: 'var(--error)', fontWeight: 600 }}>
+        <div style={{ marginBottom: 12, padding: '10px 13px', borderRadius: 6, background: 'var(--error-dim)', border: '1px solid var(--error-border)', fontSize: 12, color: 'var(--error)', fontWeight: 600 }}>
           {startError}
         </div>
       )}
 
       {/* Hardware card */}
       <div className="card" style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>
-          {usingCpu ? 'CPU COMPUTE' : 'GPU COMPUTE'}
-        </div>
+        <div className="section-label section-label--sm">{usingCpu ? 'CPU COMPUTE' : 'GPU COMPUTE'}</div>
         {usingCpu ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <CircleGauge pct={workerOn && tokensPerSec > 0 ? Math.min(100, tokensPerSec / 2) : 0} label="LOAD" value={workerOn ? 'ON' : '—'} size={88} stroke={6} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{cpu.name}</div>
+              <div className="text-strong" style={{ fontSize: 13, marginBottom: 8 }}>{cpu.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>
                 Ollama runs on CPU. Slower than GPU but works without a graphics card.
               </div>
@@ -450,7 +446,7 @@ export default function Dashboard() {
             <CircleGauge pct={gpu.utilization} label="GPU" value={`${Math.round(gpu.utilization)}%`} size={88} stroke={6} />
             <CircleGauge pct={vramPct} label="VRAM" value={`${gpu.vram_used_gb.toFixed(0)}G`} size={88} stroke={6} />
             <div style={{ flex: 1, paddingLeft: 4 }}>
-              <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>
+              <div className="text-strong" style={{ fontSize: 13, marginBottom: 4 }}>
                 {gpu.vendor && gpu.vendor !== 'none' ? `${gpu.vendor.toUpperCase()} · ` : ''}{gpu.name}
               </div>
               {!gpuDetected && (
@@ -484,24 +480,24 @@ export default function Dashboard() {
           { label: 'EARNED TODAY', val: `${earningsToday.toFixed(4)} credits` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
-            <div style={{ fontSize: 16, fontWeight: 900 }}>{s.val}</div>
+            <div className="section-label section-label--tight">{s.label}</div>
+            <div className="stat-value stat-value--md">{s.val}</div>
           </div>
         ))}
       </div>
 
       {workerOn && history.some(h => h.v > 0) && (
         <div className="card" style={{ marginBottom: 12, padding: '11px 13px' }}>
-          <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 9 }}>THROUGHPUT</div>
+          <div className="section-label" style={{ marginBottom: 9 }}>THROUGHPUT</div>
           <ResponsiveContainer width="100%" height={46}>
             <AreaChart data={history} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#CCFF00" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#CCFF00" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="var(--accent)" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="v" stroke="#CCFF00" strokeWidth={1.4} fill="url(#tg)" dot={false} isAnimationActive={false} />
+              <Area type="monotone" dataKey="v" stroke="var(--accent)" strokeWidth={1.4} fill="url(#tg)" dot={false} isAnimationActive={false} />
               <Tooltip
                 contentStyle={{ background: 'var(--bg-3)', border: '1px solid var(--border)', fontSize: 10, borderRadius: 4, padding: '3px 8px' }}
                 formatter={(v: number) => [`${v.toLocaleString()} tok/s`, '']}
@@ -515,7 +511,7 @@ export default function Dashboard() {
       {activeJob && (
         <div className="card" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>CURRENT JOB</div>
+            <div className="section-label" style={{ marginBottom: 0 }}>CURRENT JOB</div>
             <div style={{ display: 'flex', gap: 10, fontSize: 10, color: 'var(--text-muted)' }}>
               <span>{activeJob.tier ?? 'standard'}</span>
               <span className="mono" style={{ color: 'var(--text-secondary)' }}>#{activeJob.id.slice(0, 8)}</span>
@@ -536,7 +532,7 @@ export default function Dashboard() {
 
       <div className="card" style={{ padding: 0 }}>
         <div style={{ padding: '9px 13px', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>RECENT JOBS</span>
+          <span className="section-label" style={{ marginBottom: 0 }}>RECENT JOBS</span>
         </div>
         {jobs.length === 0 ? (
           <div style={{ padding: '22px 13px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}>
@@ -552,12 +548,12 @@ export default function Dashboard() {
               display: 'flex', alignItems: 'center', padding: '8px 13px',
               borderBottom: '1px solid var(--border)', gap: 10, fontSize: 11,
             }}>
-              <span style={{ color: j.status === 'completed' ? 'var(--success)' : 'var(--error)', fontWeight: 800, fontSize: 12, width: 14 }}>
+              <span style={{ color: j.status === 'completed' ? 'var(--success)' : 'var(--error)', fontWeight: 600, fontSize: 12, width: 14 }}>
                 {j.status === 'completed' ? '✓' : '✗'}
               </span>
               <span className="mono" style={{ color: 'var(--text-secondary)', flex: 1, fontSize: 10 }}>#{j.id.slice(0, 8)}</span>
               <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tokens.toLocaleString()} tok</span>
-              <span style={{ color: j.status === 'completed' ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 700, minWidth: 82, textAlign: 'right' }}>
+              <span style={{ color: j.status === 'completed' ? 'var(--accent-text)' : 'var(--text-muted)', fontWeight: 700, minWidth: 82, textAlign: 'right' }}>
                 {j.status === 'completed' ? `+${j.earn} $GRID` : '—'}
               </span>
             </div>

@@ -18,7 +18,7 @@ export default function CloseConfirmDialog({ open, onKeepRunning, onExit, onCanc
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.72)',
+        background: 'var(--overlay)',
         backdropFilter: 'blur(4px)',
       }}
     >
@@ -30,10 +30,10 @@ export default function CloseConfirmDialog({ open, onKeepRunning, onExit, onCanc
           maxWidth: 'calc(100vw - 48px)',
           padding: '22px 24px 20px',
           border: '1px solid var(--border-2)',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.55)',
+          boxShadow: 'var(--dialog-shadow)',
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+        <div className="dialog-title" style={{ marginBottom: 8 }}>
           Close Gridlock Worker?
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 22 }}>
@@ -49,7 +49,7 @@ export default function CloseConfirmDialog({ open, onKeepRunning, onExit, onCanc
               borderRadius: 8,
               border: '1px solid var(--accent-border)',
               background: 'var(--accent-dim)',
-              color: 'var(--accent)',
+              color: 'var(--accent-text)',
               fontSize: 13,
               fontWeight: 600,
               transition: 'background 0.15s, border-color 0.15s',
@@ -97,15 +97,23 @@ export default function CloseConfirmDialog({ open, onKeepRunning, onExit, onCanc
               width: '100%',
               padding: '8px 14px',
               borderRadius: 8,
-              border: 'none',
+              border: '1px solid var(--border-2)',
               background: 'transparent',
               color: 'var(--text-muted)',
               fontSize: 12,
               fontWeight: 500,
-              transition: 'color 0.15s',
+              transition: 'color 0.15s, border-color 0.15s, background 0.15s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--text-secondary)'
+              e.currentTarget.style.borderColor = 'var(--border-3)'
+              e.currentTarget.style.background = 'var(--bg-3)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-muted)'
+              e.currentTarget.style.borderColor = 'var(--border-2)'
+              e.currentTarget.style.background = 'transparent'
+            }}
           >
             Cancel
           </button>

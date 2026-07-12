@@ -78,9 +78,9 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
                 background: active ? 'var(--bg-3)' : 'none',
                 border: 'none',
                 borderRadius: 7,
-                color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                color: active ? 'var(--accent-text)' : 'var(--text-secondary)',
                 fontSize: 13,
-                fontWeight: active ? 600 : 400,
+                fontWeight: active ? 500 : 400,
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'all 0.12s',
@@ -88,7 +88,7 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
               onMouseEnter={e => {
                 if (!active) {
                   e.currentTarget.style.background = 'var(--bg-3)'
-                  e.currentTarget.style.color = 'var(--accent)'
+                  e.currentTarget.style.color = 'var(--accent-text)'
                 }
               }}
               onMouseLeave={e => {
@@ -110,12 +110,13 @@ export default function Sidebar({ page, setPage }: { page: Page; setPage: (p: Pa
       <div style={{
         padding: '12px 18px',
         borderTop: '1px solid var(--border)',
+        fontFamily: 'var(--font-mono)',
         fontSize: 10,
-        fontWeight: 700,
+        fontWeight: 500,
         color: 'var(--text-secondary)',
-        letterSpacing: '0.5px',
+        letterSpacing: '0.1em',
       }}>
-        Gridlock.Network · v0.1.3
+        Gridlock.Network · v0.1.4
       </div>
     </nav>
   )

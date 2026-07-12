@@ -1,6 +1,6 @@
 {
   "name": "gridlock-worker",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": "Gridlock Labs",
   "description": "Gridlock GPU Worker Desktop Client",
   "main": "out/main/index.js",

@@ -85,14 +85,14 @@ export default function SetupPanel() {
       <div style={{
         width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 1,
         background: done ? 'var(--accent)' : 'var(--bg-4)',
-        color: done ? '#000' : 'var(--text-muted)',
+        color: done ? 'var(--on-accent)' : 'var(--text-muted)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, fontWeight: 900,
+        fontSize: 11, fontWeight: 600,
       }}>
         {done ? '✓' : '·'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 3 }}>{label}</div>
+        <div className="text-strong" style={{ fontSize: 12, marginBottom: 3 }}>{label}</div>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{detail}</div>
         {action && <div style={{ marginTop: 10 }}>{action}</div>}
       </div>
@@ -101,10 +101,8 @@ export default function SetupPanel() {
 
   return (
     <div className="card" style={{ marginBottom: 14, border: '1px solid var(--border-2)' }}>
-      <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
-        SETUP
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>One-time setup</div>
+      <div className="section-label" style={{ marginBottom: 6 }}>SETUP</div>
+      <div className="text-strong" style={{ fontSize: 13, marginBottom: 4 }}>One-time setup</div>
       <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 12 }}>
         Gridlock bundles its worker runtime. You only need Ollama and an AI model — we&apos;ll guide you through it.
       </p>
@@ -130,9 +128,9 @@ export default function SetupPanel() {
             disabled={busy !== null}
             className={busy === 'ollama' ? 'btn-busy' : undefined}
             style={{
-              padding: '8px 16px', borderRadius: 6, fontWeight: 800, fontSize: 11,
+              padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 11,
               background: busy === 'ollama' ? 'var(--accent-mid)' : 'var(--accent)',
-              color: busy === 'ollama' ? '#000000' : '#000',
+              color: busy === 'ollama' ? 'var(--on-accent)' : 'var(--on-accent)',
               border: '1px solid var(--border-2)', cursor: busy ? 'wait' : 'pointer',
             }}
           >
@@ -154,9 +152,9 @@ export default function SetupPanel() {
             disabled={busy !== null}
             className={busy === 'model' ? 'btn-busy' : undefined}
             style={{
-              padding: '8px 16px', borderRadius: 6, fontWeight: 800, fontSize: 11,
+              padding: '8px 16px', borderRadius: 6, fontWeight: 600, fontSize: 11,
               background: busy === 'model' ? 'var(--accent-mid)' : 'var(--accent)',
-              color: busy === 'model' ? '#000000' : '#000',
+              color: busy === 'model' ? 'var(--on-accent)' : 'var(--on-accent)',
               border: '1px solid var(--border-2)', cursor: busy ? 'wait' : 'pointer',
             }}
           >

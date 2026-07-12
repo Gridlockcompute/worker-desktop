@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell, type NativeImage } from 'electron'
 import { join } from 'path'
 import { spawn, ChildProcess } from 'child_process'
-import { loadSettings, saveSettings, GRIDLOCK_API_URL, GRIDLOCK_STAKE_URL, GRIDLOCK_DASHBOARD_URL, type WorkerSettings } from './settings.js'
+import { loadSettings, saveSettings, GRIDLOCK_API_URL, GRIDLOCK_STAKE_URL, GRIDLOCK_DASHBOARD_URL, type WorkerSettings, type AppTheme } from './settings.js'
 import { getDaemonScriptPath, getPythonExecutable, getPythonModuleDir, packagedDaemonEnv } from './python.js'
 import { registerSetupHandlers } from './setup.js'
 import { fetchWalletJobs, mergeWalletJobs, type WorkerJob } from './wallet-jobs.js'
@@ -14,6 +14,10 @@ let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let quitting = false
 const DAEMON_PORT = 7420
+
+function themeBackground(theme: AppTheme = 'dark'): string {
+  return theme === 'light' ? '#F4F4F5' : '#080808'
+}
 
 function iconPath(): string {
   if (app.isPackaged) {
@@ -31,12 +35,13 @@ function loadAppIcon(size?: number): NativeImage {
 }
 
 function createWindow(): void {
+  const theme = loadSettings().theme ?? 'dark'
   mainWindow = new BrowserWindow({
     width: 1060,
     height: 720,
     minWidth: 880,
     minHeight: 580,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: themeBackground(theme),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     frame: false,
     icon: iconPath(),
@@ -121,6 +126,7 @@ function startDaemon(settings = loadSettings()): void {
         GRIDLOCK_WALLET: settings.wallet,
         GRIDLOCK_EARNINGS_WALLET: settings.earningsWallet ?? '',
         GRIDLOCK_TEE: settings.teeMode ? 'true' : 'false',
+        GRIDLOCK_TEE_FORCE: 'false',
         GRIDLOCK_COMPUTE_DEVICE: settings.computeDevice,
         GRIDLOCK_GPU_INDEX: String(settings.gpuIndex ?? 0),
       }),
@@ -245,6 +251,7 @@ async function syncConfigToDaemon(settings: WorkerSettings): Promise<boolean> {
       body: JSON.stringify({
         compute_device: settings.computeDevice,
         gpu_index: settings.gpuIndex ?? 0,
+        tee_mode: settings.teeMode,
       }),
     })
     return res.ok
@@ -254,6 +261,7 @@ async function syncConfigToDaemon(settings: WorkerSettings): Promise<boolean> {
 }
 
 ipcMain.handle('settings:save', async (_e, cfg: WorkerSettings) => {
+  const prev = loadSettings()
   const normalizedWallet = normalizeWallet(cfg.wallet)
   const normalizedEarnings = cfg.earningsWallet?.trim() ? normalizeWallet(cfg.earningsWallet.trim()) : null
   const next: WorkerSettings = {
@@ -261,7 +269,15 @@ ipcMain.handle('settings:save', async (_e, cfg: WorkerSettings) => {
     wallet: normalizedWallet ?? cfg.wallet,
     earningsWallet: normalizedEarnings ?? '',
   }
+  const teeChanged = prev.teeMode !== next.teeMode
   saveSettings(next)
+  mainWindow?.setBackgroundColor(themeBackground(next.theme ?? 'dark'))
+
+  if (teeChanged) {
+    startDaemon(next)
+    return { ok: true, teeRestarted: true }
+  }
+
   const syncedWallet = normalizedWallet
     ? await syncWalletToDaemon(normalizedWallet, normalizedEarnings ?? undefined)
     : false

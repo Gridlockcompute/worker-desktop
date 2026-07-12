@@ -19,6 +19,7 @@ export const GRIDLOCK_DASHBOARD_URL = (
 ).replace(/\/$/, '')
 
 export type ComputeDevice = 'auto' | 'cpu' | 'gpu'
+export type AppTheme = 'dark' | 'light'
 
 export interface WorkerSettings {
   wallet: string
@@ -30,6 +31,7 @@ export interface WorkerSettings {
   tier: string
   computeDevice: ComputeDevice
   gpuIndex: number
+  theme: AppTheme
 }
 
 const DEFAULTS: WorkerSettings = {
@@ -41,6 +43,7 @@ const DEFAULTS: WorkerSettings = {
   tier: 'Batch',
   computeDevice: 'auto',
   gpuIndex: 0,
+  theme: 'dark',
 }
 
 function settingsPath(): string {

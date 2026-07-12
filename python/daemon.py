@@ -38,7 +38,8 @@ BACKEND_URL   = os.getenv("GRIDLOCK_BACKEND_URL", "https://api.grid-lock.tech")
 WALLET_ADDR   = os.getenv("GRIDLOCK_WALLET", "")
 EARNINGS_WALLET = os.getenv("GRIDLOCK_EARNINGS_WALLET", "")
 ROLE          = os.getenv("GRIDLOCK_ROLE", "Prefill")
-TEE_CAPABLE   = os.getenv("GRIDLOCK_TEE", "false").lower() == "true"
+TEE_MODE_REQUESTED = os.getenv("GRIDLOCK_TEE", "false").lower() == "true"
+TEE_CAPABLE   = False
 COMPUTE_MODE  = hardware_detect.normalize_compute_mode(os.getenv("GRIDLOCK_COMPUTE_DEVICE", "auto"))
 GPU_INDEX     = int(os.getenv("GRIDLOCK_GPU_INDEX", "0") or "0")
 
@@ -60,6 +61,11 @@ state = {
     "gpu":            hardware_detect.empty_gpu("Detecting…"),
     "gpu_detected":   False,
     "effective_compute": "auto",
+    "tee_mode_requested": TEE_MODE_REQUESTED,
+    "tee_hardware_detected": False,
+    "tee_gpu_name": None,
+    "router_tee_capable": None,
+    "tee_warning": None,
     "active_job":     None,
     "jobs":           [],
     "tokens_per_sec": 0,
@@ -88,6 +94,29 @@ _SSL_CTX = _ssl_context()
 
 # ── Hardware detection ────────────────────────────────────────────────────────
 
+def tee_force_override() -> bool:
+    return os.getenv("GRIDLOCK_TEE_FORCE", "").lower() in ("1", "true", "yes")
+
+
+def refresh_tee_capable() -> bool:
+    global TEE_CAPABLE
+    requested = bool(state.get("tee_mode_requested"))
+    hardware = bool(state.get("tee_hardware_detected"))
+    TEE_CAPABLE = requested and (hardware or tee_force_override())
+    if requested and not TEE_CAPABLE and not tee_force_override():
+        state["tee_warning"] = (
+            "No CC-capable GPU detected (H100, H200, B200, GB200, L40S, RTX 6000 Ada). "
+            "Confidential jobs will not be routed to this worker."
+        )
+    elif requested and TEE_CAPABLE and tee_force_override() and not hardware:
+        state["tee_warning"] = "TEE force override enabled — dev/mock attestation only."
+    elif requested and TEE_CAPABLE:
+        state["tee_warning"] = None
+    elif not requested:
+        state["tee_warning"] = None
+    return TEE_CAPABLE
+
+
 def refresh_hardware() -> dict:
     snap = hardware_detect.scan_hardware(state["compute_mode"], state["gpu_index"])
     state["cpu"] = snap["cpu"]
@@ -95,6 +124,9 @@ def refresh_hardware() -> dict:
     state["gpu"] = snap["display"]
     state["gpu_detected"] = snap["gpu_detected"]
     state["effective_compute"] = snap["effective_compute"]
+    state["tee_hardware_detected"] = snap.get("tee_hardware_detected", False)
+    state["tee_gpu_name"] = snap.get("tee_gpu_name")
+    refresh_tee_capable()
     inference.set_compute_mode(snap["effective_compute"])
     return snap
 
@@ -167,6 +199,56 @@ def _req(method: str, path: str, body: dict | None = None) -> dict | None:
         return None
 
 
+def _fetch_worker_profile(address: str) -> dict | None:
+    return _req("GET", f"/v1/workers/{quote(address, safe='')}")
+
+
+def _sync_tee_capability_on_backend(address: str | None = None) -> bool:
+    addr = evm_wallet.normalize_evm_address(address or state["worker_address"] or "")
+    if not addr:
+        return False
+
+    refresh_tee_capable()
+    effective = TEE_CAPABLE
+    hw_tier = hardware_detect.hardware_tier_label(
+        state["compute_mode"], state["cpu"], state["gpus"], state["gpu_index"],
+    )
+
+    profile = _fetch_worker_profile(addr)
+    if not profile:
+        return False
+
+    state["router_tee_capable"] = bool(profile.get("tee_capable"))
+    if profile.get("tee_capable") == effective:
+        return True
+
+    body = {
+        "tee_capable": effective,
+        "is_confidential": effective,
+        "hardware_tier": hw_tier,
+    }
+    if effective:
+        quote_payload = evm_wallet.resolve_registration_attestation_quote(
+            BACKEND_URL, addr, True, _SSL_CTX,
+        )
+        if quote_payload:
+            body["attestation_quote"] = quote_payload
+
+    result = _req("PATCH", f"/v1/workers/{quote(addr, safe='')}/tee-capability", body)
+    if result and result.get("ok"):
+        state["router_tee_capable"] = bool(result.get("tee_capable", effective))
+        state["last_backend_error"] = None
+        log({"event": "tee_synced", "tee_capable": state["router_tee_capable"]})
+        return True
+
+    log({
+        "event": "tee_sync_failed",
+        "wanted": effective,
+        "err": state.get("last_backend_error"),
+    })
+    return False
+
+
 def register_with_backend():
     addr = evm_wallet.normalize_evm_address(state["worker_address"] or "")
     if not addr:
@@ -176,6 +258,7 @@ def register_with_backend():
         return
 
     state["worker_address"] = addr
+    refresh_tee_capable()
     hw_tier = hardware_detect.hardware_tier_label(
         state["compute_mode"], state["cpu"], state["gpus"], state["gpu_index"],
     )
@@ -200,12 +283,14 @@ def register_with_backend():
             state["worker_address"] = result.get("address") or addr
             state["backend_ok"] = True
             state["last_backend_error"] = None
+            state["router_tee_capable"] = TEE_CAPABLE
             log({"event": "registered", "address": state["worker_address"], "mode": "new"})
             return True
         if result and result.get("status") == 409:
             state["worker_address"] = addr
             state["backend_ok"] = True
             state["last_backend_error"] = None
+            _sync_tee_capability_on_backend(addr)
             log({"event": "registered", "address": state["worker_address"], "mode": "409_existing"})
             return True
         state["backend_ok"] = False
@@ -590,7 +675,13 @@ class Handler(BaseHTTPRequestHandler):
                 "inference_backend": state["inference_backend"],
                 "worker_address":    state["worker_address"],
                 "earnings_wallet":   state.get("earnings_wallet") or state["worker_address"],
+                "tee_mode_requested": state.get("tee_mode_requested", False),
+                "tee_hardware_detected": state.get("tee_hardware_detected", False),
+                "tee_gpu_name":      state.get("tee_gpu_name"),
                 "tee_capable":       TEE_CAPABLE,
+                "router_tee_capable": state.get("router_tee_capable"),
+                "tee_warning":       state.get("tee_warning"),
+                "tee_force_override": tee_force_override(),
                 "compute_mode":      state["compute_mode"],
                 "effective_compute": state["effective_compute"],
                 "gpu_index":         state["gpu_index"],
@@ -683,11 +774,24 @@ class Handler(BaseHTTPRequestHandler):
                 compute_mode=body.get("compute_device"),
                 gpu_index=body.get("gpu_index"),
             )
+            tee_changed = False
+            if "tee_mode" in body:
+                requested = bool(body.get("tee_mode"))
+                tee_changed = state.get("tee_mode_requested") != requested
+                state["tee_mode_requested"] = requested
+                refresh_tee_capable()
+            if tee_changed and state["worker_address"]:
+                _sync_tee_capability_on_backend()
             self._json({
                 "ok": True,
                 "compute_mode": state["compute_mode"],
                 "effective_compute": state["effective_compute"],
                 "gpu_index": state["gpu_index"],
+                "tee_mode_requested": state.get("tee_mode_requested", False),
+                "tee_hardware_detected": state.get("tee_hardware_detected", False),
+                "tee_capable": TEE_CAPABLE,
+                "router_tee_capable": state.get("router_tee_capable"),
+                "tee_warning": state.get("tee_warning"),
                 "cpu": snap["cpu"],
                 "gpus": snap["gpus"],
                 "gpu": snap["display"],
@@ -740,12 +844,16 @@ if __name__ == "__main__":
     state["earnings_wallet"] = args.earnings_wallet or args.wallet or ""
     state["compute_mode"]    = hardware_detect.normalize_compute_mode(args.compute)
     state["gpu_index"]       = max(0, args.gpu_index)
-    TEE_CAPABLE              = args.tee or TEE_CAPABLE
-    inference.set_compute_mode(state["compute_mode"])
-
+    state["tee_mode_requested"] = bool(args.tee or TEE_MODE_REQUESTED)
     detect_hardware()
+    refresh_tee_capable()
+    inference.set_compute_mode(state["compute_mode"])
     if state["worker_address"]:
         register_with_backend()
+        if state["backend_ok"]:
+            profile = _fetch_worker_profile(state["worker_address"])
+            if profile:
+                state["router_tee_capable"] = bool(profile.get("tee_capable"))
 
     # Background heartbeat
     hb = threading.Thread(target=heartbeat_loop, daemon=True)

@@ -11,6 +11,16 @@ import sys
 
 ComputeMode = str  # "auto" | "cpu" | "gpu"
 
+# Mirrors @gridlock/shared tee-hardware patterns for CC-capable data center GPUs.
+_TEE_GPU_PATTERNS = (
+    re.compile(r"h100", re.I),
+    re.compile(r"h200", re.I),
+    re.compile(r"b200", re.I),
+    re.compile(r"gb200", re.I),
+    re.compile(r"l40s", re.I),
+    re.compile(r"6000 ada", re.I),
+)
+
 
 def _float(val: str, default: float = 0.0) -> float:
     val = (val or "").strip()
@@ -86,39 +96,135 @@ def empty_cpu(name: str = "Detecting CPU…") -> dict:
     }
 
 
+def _clean_cpu_name(name: str) -> str:
+    cleaned = name.replace("(R)", "").replace("(TM)", "").replace("(tm)", "")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _detect_cpu_name_windows() -> str | None:
+    out = _run_cmd([
+        "powershell",
+        "-NoProfile",
+        "-Command",
+        "(Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name).Trim()",
+    ])
+    if out:
+        return _clean_cpu_name(out.strip())
+
+    out = _run_cmd(["wmic", "cpu", "get", "Name", "/format:list"])
+    if out:
+        for line in out.splitlines():
+            if line.lower().startswith("name="):
+                value = line.split("=", 1)[1].strip()
+                if value:
+                    return _clean_cpu_name(value)
+    return None
+
+
+def _detect_cpu_cores_windows() -> int | None:
+    out = _run_cmd([
+        "powershell",
+        "-NoProfile",
+        "-Command",
+        "(Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum",
+    ])
+    if out:
+        cores = int(_float(out.strip(), 0))
+        return cores if cores > 0 else None
+
+    out = _run_cmd(["wmic", "cpu", "get", "NumberOfCores", "/format:list"])
+    if out:
+        for line in out.splitlines():
+            if line.lower().startswith("numberofcores="):
+                cores = int(_float(line.split("=", 1)[1], 0))
+                return cores if cores > 0 else None
+    return None
+
+
+def _detect_cpu_name_linux() -> str | None:
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if "model name" in line:
+                    value = line.split(":", 1)[1].strip()
+                    if value:
+                        return _clean_cpu_name(value)
+    except OSError:
+        pass
+
+    out = _run_cmd(["lscpu"])
+    if out:
+        for line in out.splitlines():
+            if line.strip().lower().startswith("model name:"):
+                value = line.split(":", 1)[1].strip()
+                if value:
+                    return _clean_cpu_name(value)
+    return None
+
+
+def _detect_cpu_cores_linux() -> int | None:
+    out = _run_cmd(["lscpu", "-p=CORE,SOCKET"])
+    if out:
+        pairs: set[tuple[str, str]] = set()
+        for line in out.splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 2 and parts[0] and parts[1]:
+                pairs.add((parts[0], parts[1]))
+        if pairs:
+            return len(pairs)
+
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8", errors="replace") as f:
+            cores = 0
+            for line in f:
+                if line.lower().startswith("cpu cores"):
+                    cores = max(cores, int(_float(line.split(":", 1)[1].strip(), 0)))
+            if cores > 0:
+                return cores
+    except OSError:
+        pass
+    return None
+
+
+def _detect_cpu_name_darwin() -> str | None:
+    out = _run_cmd(["sysctl", "-n", "machdep.cpu.brand_string"])
+    if out:
+        return _clean_cpu_name(out.strip())
+    return None
+
+
+def _detect_cpu_cores_darwin() -> int | None:
+    out = _run_cmd(["sysctl", "-n", "hw.physicalcpu"])
+    if out:
+        cores = int(_float(out.strip(), 0))
+        return cores if cores > 0 else None
+    return None
+
+
 def detect_cpu() -> dict:
     threads = os.cpu_count() or 0
-    name = platform.processor().strip() or ""
-
-    if sys.platform == "win32":
-        out = _run_cmd(["wmic", "cpu", "get", "Name", "/format:list"])
-        if out:
-            for line in out.splitlines():
-                if line.lower().startswith("name="):
-                    name = line.split("=", 1)[1].strip()
-                    break
-    elif sys.platform == "linux":
-        try:
-            with open("/proc/cpuinfo", encoding="utf-8", errors="replace") as f:
-                for line in f:
-                    if "model name" in line:
-                        name = line.split(":", 1)[1].strip()
-                        break
-        except OSError:
-            pass
-    elif sys.platform == "darwin":
-        out = _run_cmd(["sysctl", "-n", "machdep.cpu.brand_string"])
-        if out:
-            name = out.strip()
-
+    name = ""
     cores = threads
+
     if sys.platform == "win32":
-        out = _run_cmd(["wmic", "cpu", "get", "NumberOfCores", "/format:list"])
-        if out:
-            for line in out.splitlines():
-                if line.lower().startswith("numberofcores="):
-                    cores = int(_float(line.split("=", 1)[1], threads))
-                    break
+        name = _detect_cpu_name_windows() or platform.processor().strip() or ""
+        detected_cores = _detect_cpu_cores_windows()
+        if detected_cores is not None:
+            cores = detected_cores
+    elif sys.platform == "linux":
+        name = _detect_cpu_name_linux() or platform.processor().strip() or ""
+        detected_cores = _detect_cpu_cores_linux()
+        if detected_cores is not None:
+            cores = detected_cores
+    elif sys.platform == "darwin":
+        name = _detect_cpu_name_darwin() or platform.processor().strip() or ""
+        detected_cores = _detect_cpu_cores_darwin()
+        if detected_cores is not None:
+            cores = detected_cores
+    else:
+        name = platform.processor().strip() or ""
 
     if not name:
         name = f"{platform.system()} CPU"
@@ -400,11 +506,29 @@ def can_start(compute_mode: ComputeMode, cpu: dict, gpus: list[dict]) -> tuple[b
     return True, None
 
 
+def is_tee_capable_gpu_name(name: str) -> bool:
+    normalized = (name or "").strip()
+    if not normalized:
+        return False
+    return any(pattern.search(normalized) for pattern in _TEE_GPU_PATTERNS)
+
+
+def tee_hardware_status(gpus: list[dict], gpu_index: int = 0) -> dict:
+    gpu = select_gpu(gpus, gpu_index)
+    name = (gpu or {}).get("name", "")
+    detected = is_tee_capable_gpu_name(name)
+    return {
+        "tee_hardware_detected": detected,
+        "tee_gpu_name": name if detected else None,
+    }
+
+
 def scan_hardware(compute_mode: ComputeMode = "auto", gpu_index: int = 0) -> dict:
     cpu = detect_cpu()
     gpus = detect_all_gpus()
     effective = effective_compute_mode(compute_mode, gpus)
     display = active_device_display(compute_mode, cpu, gpus, gpu_index)
+    tee = tee_hardware_status(gpus, gpu_index)
     return {
         "cpu": cpu,
         "gpus": gpus,
@@ -414,4 +538,5 @@ def scan_hardware(compute_mode: ComputeMode = "auto", gpu_index: int = 0) -> dic
         "display": display,
         "gpu_detected": len(gpus) > 0,
         "hardware_tier": hardware_tier_label(compute_mode, cpu, gpus, gpu_index),
+        **tee,
     }

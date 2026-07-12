@@ -12,8 +12,12 @@ type Job = {
   ts: number
 }
 
-function fmtAge(ts: number): string {
-  const s = Math.floor((Date.now() - ts * 1000) / 1000)
+function fmtJobTime(job: Job, now: number): string {
+  const s = Math.max(0, Math.floor((now - job.ts * 1000) / 1000))
+  if (job.status === 'running') {
+    if (s < 60) return `${s}s`
+    return `${Math.floor(s / 60)}m ${s % 60}s`
+  }
   if (s < 60) return `${s}s ago`
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   return `${Math.floor(s / 3600)}h ago`
@@ -27,6 +31,12 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [filter, setFilter] = useState<'all' | 'completed' | 'failed'>('all')
   const [walletConnected, setWalletConnected] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(tick)
+  }, [])
 
   useEffect(() => {
     const gl = (window as unknown as {
@@ -53,7 +63,7 @@ export default function Jobs() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-      <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 20 }}>Jobs</div>
+      <div className="page-title">Jobs</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
         {[
@@ -63,8 +73,8 @@ export default function Jobs() {
           { label: 'TOTAL EARNED',  val: `${totalEarn.toFixed(4)} $GRID` },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '11px 13px' }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '1.2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 7 }}>{s.label}</div>
-            <div style={{ fontSize: 16, fontWeight: 900 }}>{s.val}</div>
+            <div className="section-label section-label--tight">{s.label}</div>
+            <div className="stat-value stat-value--md">{s.val}</div>
           </div>
         ))}
       </div>
@@ -74,7 +84,7 @@ export default function Jobs() {
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '7px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
             background: 'none', border: 'none',
-            color: filter === f ? 'var(--accent)' : 'var(--text-muted)',
+            color: filter === f ? 'var(--accent-text)' : 'var(--text-muted)',
             borderBottom: filter === f ? '2px solid var(--accent)' : '2px solid transparent',
             marginBottom: -1, textTransform: 'capitalize',
           }}>{f}</button>
@@ -94,16 +104,16 @@ export default function Jobs() {
             alignItems: 'center', padding: '9px 13px',
             borderBottom: '1px solid var(--border)', gap: 8, fontSize: 11,
           }}>
-            <span style={{ color: j.status === 'completed' ? 'var(--success)' : j.status === 'running' ? 'var(--accent)' : 'var(--error)', fontWeight: 800 }}>
+            <span style={{ color: j.status === 'completed' ? 'var(--success)' : j.status === 'running' ? 'var(--accent-text)' : 'var(--error)', fontWeight: 600 }}>
               {j.status === 'completed' ? '✓' : j.status === 'running' ? '…' : '✗'}
             </span>
             <span className="mono" style={{ color: 'var(--text-secondary)', fontSize: 10 }}>#{j.id.slice(0, 12)}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tier ?? '—'}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{j.tokens.toLocaleString()} tok</span>
-            <span style={{ fontWeight: 700, color: j.status === 'completed' ? 'var(--accent)' : 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 700, color: j.status === 'completed' ? 'var(--accent-text)' : 'var(--text-muted)' }}>
               {j.status === 'completed' ? `+${j.earn}` : '—'}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 10, textAlign: 'right' }}>{fmtAge(j.ts)}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10, textAlign: 'right' }}>{fmtJobTime(j, now)}</span>
           </div>
         ))}
       </div>

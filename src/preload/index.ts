@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 export type DaemonEvent = { event: string; [k: string]: unknown }
 export type ComputeDevice = 'auto' | 'cpu' | 'gpu'
+export type AppTheme = 'dark' | 'light'
 
 export type WorkerSettings = {
   wallet: string
@@ -12,6 +13,7 @@ export type WorkerSettings = {
   tier: string
   computeDevice: ComputeDevice
   gpuIndex: number
+  theme: AppTheme
 }
 
 export type WorkerEarningsView = {
@@ -60,7 +62,13 @@ const api = {
       inference_error?: string | null
       inference_backend?: string | null
       worker_address?: string
+      tee_mode_requested?: boolean
+      tee_hardware_detected?: boolean
+      tee_gpu_name?: string | null
       tee_capable?: boolean
+      router_tee_capable?: boolean | null
+      tee_warning?: string | null
+      tee_force_override?: boolean
       compute_mode?: ComputeDevice
       effective_compute?: ComputeDevice | 'gpu' | 'cpu'
       gpu_index?: number
@@ -89,7 +97,7 @@ const api = {
   },
   settings: {
     load: (): Promise<WorkerSettings> => ipcRenderer.invoke('settings:load'),
-    save: (cfg: WorkerSettings): Promise<{ ok: boolean }> => ipcRenderer.invoke('settings:save', cfg)
+    save: (cfg: WorkerSettings): Promise<{ ok: boolean; teeRestarted?: boolean }> => ipcRenderer.invoke('settings:save', cfg)
   },
   setup: {
     check: () => ipcRenderer.invoke('setup:check'),
