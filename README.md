@@ -25,7 +25,7 @@ No GRID bond deposit is required. SLA misses deduct penalties from your pending 
 - **EVM identity** — validates `0x` addresses in the UI and Python daemon before registration
 - **Hardware auto-detection** — NVIDIA, AMD, and CPU-only modes via Ollama
 - **Local daemon API** — Electron UI talks to Python on `127.0.0.1:7420`
-- **WebSocket + REST** — same router protocol as [worker-cli](https://github.com/Gridlockcompute/worker-cli)
+- **WebSocket + REST** — same router protocol as [native-worker](https://github.com/Gridlockcompute/native-worker)
 - **Configurable compute** — Auto, CPU, or GPU; VRAM limit and SLA tier in Settings
 
 ## Prerequisites
@@ -179,7 +179,7 @@ worker-desktop/
 | Repo | Role |
 |------|------|
 | [router](https://github.com/Gridlockcompute/router) | Hono API — job routing, WebSocket hub |
-| [worker-cli](https://github.com/Gridlockcompute/worker-cli) | Headless CLI worker (Ollama/vLLM) |
+| [native-worker](https://github.com/Gridlockcompute/native-worker) | Headless CLI worker (Ollama/vLLM) |
 | [contracts](https://github.com/Gridlockcompute/gridlockcompute) | EVM Solidity contracts on Robinhood Chain |
 
 **Website:** [https://grid-lock.tech](https://grid-lock.tech) · **Docs:** [https://grid-lock.tech/docs](https://grid-lock.tech/docs)
