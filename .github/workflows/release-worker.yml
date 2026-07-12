@@ -40,8 +40,8 @@ jobs:
         with:
           name: gridlock-worker-windows
           path: |
-            release/Gridlock-Worker-Setup-*.exe
-            release/latest.yml
+            dist-release/Gridlock-Worker-Setup-*.exe
+            dist-release/latest.yml
 
   build-macos:
     runs-on: macos-latest
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: gridlock-worker-macos
-          path: release/Gridlock-Worker-*.dmg
+          path: dist-release/Gridlock-Worker-*.dmg
 
   build-linux:
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: gridlock-worker-linux
-          path: release/Gridlock-Worker-*.AppImage
+          path: dist-release/Gridlock-Worker-*.AppImage
 
   release:
     needs: [build-windows, build-macos, build-linux]
