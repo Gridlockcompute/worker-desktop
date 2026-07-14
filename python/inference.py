@@ -181,6 +181,7 @@ def _run_ollama(
         "model": get_active_model(),
         "messages": messages,
         "stream": True,
+        "keep_alive": "30m",
         "options": {
             "num_predict": max_tokens,
             "num_gpu": _ollama_num_gpu(),
